@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TutinGuard — пульт (тех. панель)</title>
+<style>
+  :root{--bg:#0f1317;--card:#171c22;--line:#262d35;--tx:#e6eaee;--mut:#8d98a3;--ok:#22c55e;--warn:#facc15;--bad:#ef4444;--off:#6b7280;--acc:#2dd4bf}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+  header b{font-size:17px} .pill{padding:2px 9px;border-radius:999px;font-weight:600;font-size:12px;white-space:nowrap}
+  .ok{background:rgba(34,197,94,.15);color:#4ade80}.warn{background:rgba(250,204,21,.15);color:#fde047}.bad{background:rgba(239,68,68,.2);color:#fca5a5}.off{background:rgba(107,114,128,.25);color:#cbd5e1}
+  .stat{color:var(--mut)} .stat span{color:var(--tx);font-weight:600}
+  main{display:grid;grid-template-columns:minmax(330px,1.1fr) minmax(330px,1.2fr) minmax(300px,1fr);gap:14px;padding:14px 18px}
+  @media(max-width:1100px){main{grid-template-columns:1fr}}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+  h3{margin:0 0 10px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+  button,select,input{font:inherit;color:var(--tx);background:#222a32;border:1px solid var(--line);border-radius:8px;padding:5px 9px}
+  button{cursor:pointer} button:hover{background:#2b343e} button.red{border-color:#7f1d1d;background:#3a1717} button.green{border-color:#14532d;background:#13281b}
+  .inc{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px}
+  .inc.fire,.inc.gas{border-color:#7f1d1d;background:rgba(239,68,68,.06)} .inc.attention{border-color:#713f12}
+  .inc .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .inc .meta{color:var(--mut);font-size:12px;margin:4px 0 8px}
+  .inc .acts{display:flex;flex-wrap:wrap;gap:6px} .inc details{margin-top:8px;color:var(--mut);font-size:12px}
+  .inc details div{padding:2px 0;border-top:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums} td,th{padding:4px 5px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}
+  th{color:var(--mut);font-weight:500} tr.flash{animation:fl .8s} @keyframes fl{from{background:rgba(45,212,191,.25)}to{background:transparent}}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  #events{max-height:300px;overflow:auto;font-size:12px} #events div{padding:3px 0;border-bottom:1px solid var(--line)} .t{color:var(--mut);font-family:ui-monospace,Menlo,monospace;margin-right:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .callcard{border:2px dashed #ef4444;border-radius:10px;padding:10px;margin-bottom:10px;background:rgba(239,68,68,.08)}
+  .muted{color:var(--mut)} a{color:var(--acc)}
+  .empty{color:var(--mut);padding:6px 0}
+  .airow{display:grid;grid-template-columns:120px 1fr 44px;gap:8px;align-items:center;padding:4px 0}
+  .bar{height:8px;border-radius:4px;background:#222a32;overflow:hidden} .bar i{display:block;height:100%;border-radius:4px}
+  .aiwhy{grid-column:1/-1;color:var(--mut);font-size:12px;margin:-2px 0 4px} .ai-why{font-size:12.5px;margin:2px 0 4px;color:#fde68a}
+</style>
+</head>
+<body>
+<header>
+  <b>TutinGuard</b><span class="muted">техническая панель проверки потока данных · тестовые данные</span>
+  <span id="ui" class="pill warn">панель: подключение…</span>
+  <span id="sim" class="pill off">симулятор: —</span>
+  <span class="stat">датчиков онлайн <span id="sOnline">—</span></span>
+  <span class="stat">реакция ср. <span id="sReact">—</span></span>
+  <span class="stat">ложные <span id="sFalse">—</span></span>
+  <span class="stat">просрочено проверок <span id="sOver">—</span></span>
+  <span style="flex:1"></span>
+  <label class="muted">Я — <select id="actor"><option value="operator">оператор</option><option value="responsible">ответственный</option><option value="technician">техник</option></select></label>
+  <a href="/sim/" target="_blank">открыть 3D-симулятор ↗</a>
+</header>
+<main>
+  <section>
+    <h3>AI-прогноз возгорания · ближайший час</h3>
+    <div id="ai"><div class="empty">Ждём данные от симулятора…</div></div>
+    <div id="aicard" class="muted" style="font-size:11.5px;margin:6px 0 14px"></div>
+    <h3>Инциденты</h3>
+    <div id="callcards"></div>
+    <div id="incidents"><div class="empty">Открытых инцидентов нет</div></div>
+    <h3 style="margin-top:14px">Команды на объект</h3>
+    <div class="grid2">
+      <button class="red" data-cmd="siren_on">Включить сирены</button><button data-cmd="siren_off">Выключить сирены</button>
+      <button class="red" data-cmd="evacuation_on">Эвакуация</button><button data-cmd="unlock_exits">Разблокировать выходы</button>
+      <button data-cmd="run_test">Тест оповещения</button><button data-cmd="reset_all">Сброс симуляции</button>
+    </div>
+    <p class="muted" style="margin:8px 0 0">Демонстрация не заменяет штатную сигнализацию и не отправляет реальные вызовы экстренным службам.</p>
+  </section>
+  <section>
+    <h3>Устройства</h3>
+    <table><thead><tr><th>ID</th><th>Зона</th><th>Тип</th><th>Значение</th><th>Был в сети</th></tr></thead><tbody id="devices"></tbody></table>
+  </section>
+  <section>
+    <h3>Журнал событий</h3>
+    <div id="events"></div>
+    <h3 style="margin-top:14px">Люди</h3>
+    <table><tbody id="people"><tr><td class="empty">Нет данных — откройте симулятор</td></tr></tbody></table>
+    <h3 style="margin-top:14px">Задачи техника</h3>
+    <div id="tasks"></div>
+    <h3 style="margin-top:14px">Плановые проверки</h3>
+    <div id="insp"></div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const STATE = { normal: ['норма', 'ok'], pre_alarm: ['внимание', 'warn'], alarm: ['ТРЕВОГА', 'bad'], offline: ['нет связи', 'off'], fault: ['неисправен', 'warn'], test: ['тест', 'warn'], disabled: ['отключен', 'off'] };
+const COL = { ok: '#22c55e', warn: '#facc15', bad: '#ef4444', off: '#6b7280' };
+const KIND = { fire: 'Пожар', gas: 'Газ', fault: 'Неисправность', offline: 'Нет связи', risk: 'Риск возгорания' };
+const LEVEL = { forecast: ['AI-прогноз', 'warn'], attention: ['Внимание (1 датчик)', 'warn'], fire: ['ПОЖАР подтверждён', 'bad'], gas: ['ГАЗ', 'bad'], fault: ['Неисправность', 'off'] };
+const STATUS = { new: 'новый', acknowledged: 'принят', assigned: 'назначен', checking: 'проверка на месте', closed: 'закрыт' };
+const RESULT = { confirmed_fire: 'Пожар подтверждён', false_alarm: 'Ложное срабатывание', checked_ok: 'Проверено, причина устранена', test: 'Тест', device_fault: 'Неисправность датчика', gas_leak: 'Утечка газа' };
+const TYPE = { multi: 'мульти', smoke: 'дымовой', heat: 'тепловой', gas_lel: 'газ CH₄', gas_co: 'CO', manual: 'ручной', panel: 'пульт' };
+let site = null, users = [], devices = {}, incidents = {}, zones = {};
+const fmtT = (s) => s ? new Date(s).toLocaleTimeString('ru-RU') : '—';
+const ago = (s) => { if (!s) return '—'; const d = Math.round((Date.now() - new Date(s)) / 1000); return d < 60 ? d + ' с назад' : Math.round(d / 60) + ' мин назад'; };
+const api = async (path, opts = {}) => { const r = await fetch(path, { headers: { 'content-type': 'application/json' }, ...opts }); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.status); return r.json(); };
+const actor = () => $('actor').value;
+
+function valStr(d) {
+  const v = d.last_values || {};
+  if ('obscuration_db_m' in v && 'temp_c' in v) return `${v.obscuration_db_m.toFixed(3)} дБ/м · ${v.temp_c} °C · ${v.co_ppm} ppm`;
+  if ('obscuration_db_m' in v) return v.obscuration_db_m.toFixed(3) + ' дБ/м';
+  if ('temp_c' in v) return v.temp_c + ' °C' + (v.ror_c_min > 2 ? ` (+${v.ror_c_min}/мин)` : '');
+  if ('lel_pct' in v) return v.lel_pct + '% НКПР';
+  if ('co_ppm' in v) return v.co_ppm + ' ppm';
+  if ('pressed' in v) return v.pressed ? 'НАЖАТ' : '—';
+  if ('mains_ok' in v) return 'обрывов: ' + v.line_faults;
+  return '—';
+}
+function renderDevices() {
+  const rows = Object.values(devices).sort((a, b) => (a.zone_id || '').localeCompare(b.zone_id || '') || a.device_id.localeCompare(b.device_id));
+  $('devices').innerHTML = rows.map(d => { const [t, c] = STATE[d.state] || [d.state, 'off'];
+    return `<tr id="dev-${d.device_id}"><td><span class="dot" style="background:${COL[c]}"></span>${d.device_id}${d.suspicious ? ' <span class="pill warn">подозр.</span>' : ''}</td><td>${zones[d.zone_id] || d.zone_id || ''}</td><td>${TYPE[d.device_type] || d.device_type}</td><td>${valStr(d)}</td><td class="muted" data-seen="${d.last_seen || ''}">${ago(d.last_seen)}</td></tr>`; }).join('');
+}
+function flash(id) { const r = $('dev-' + id); if (r) { r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash'); } }
+function renderIncidents() {
+  const list = Object.values(incidents).filter(i => i.status !== 'closed').sort((a, b) => { const p = (i) => ({ fire: 0, gas: 0, attention: 1, forecast: 2, fault: 3 })[i.level] ?? 4; return p(a) - p(b) || b.id - a.id; });
+  if (!list.length) { $('incidents').innerHTML = '<div class="empty">Открытых инцидентов нет</div>'; return; }
+  const opts = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+  $('incidents').innerHTML = list.map(i => { const [lt, lc] = LEVEL[i.level] || [i.level, 'off'];
+    return `<div class="inc ${i.level}">
+      <div class="top"><b>#${i.id} · ${KIND[i.kind] || i.kind} · ${zones[i.zone_id] || i.zone_id || ''}</b><span class="pill ${lc}">${lt}</span></div>
+      ${i.kind === 'risk' && i.log && i.log[0] ? `<div class="ai-why">${i.log[0].comment}</div>` : ''}
+      <div class="meta">Статус: <b>${STATUS[i.status]}</b> · открыт ${fmtT(i.opened_at)} · повторов: ${i.repeat_count} · датчики: ${(i.device_ids || []).join(', ')}${i.reaction_s != null ? ' · реакция ' + i.reaction_s + ' с' : ''}${i.escalated ? ' · <span class="pill bad">автоэскалация</span>' : ''}</div>
+      <div class="acts">
+        ${i.status === 'new' ? `<button class="green" onclick="act(${i.id},'ack')">Принять</button>` : ''}
+        <select id="as-${i.id}">${opts}</select><button onclick="act(${i.id},'assign',{assignee_id:+$('as-${i.id}').value})">Назначить</button>
+        <button onclick="act(${i.id},'checking')">Проверяю на месте</button>
+        <select id="rs-${i.id}">${Object.entries(RESULT).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+        <button onclick="act(${i.id},'close',{result:$('rs-${i.id}').value})">Закрыть</button>
+      </div>
+      <details><summary>Журнал действий (${(i.log || []).length})</summary>${(i.log || []).map(l => `<div><span class="t">${fmtT(l.ts)}</span>${l.actor}: ${l.action}${l.comment ? ' — ' + l.comment : ''}</div>`).join('')}</details>
+    </div>`; }).join('');
+}
+async function act(id, action, extra = {}) {
+  try { const d = await api(`/api/incidents/${id}/${action}`, { method: 'POST', body: JSON.stringify({ actor: actor(), ...extra }) }); incidents[d.id] = d; renderIncidents(); refreshStats(); }
+  catch (e) { alert('Ошибка: ' + e.message); }
+}
+async function reloadIncident(id) { const all = await api('/api/incidents?status=all&limit=100'); incidents = Object.fromEntries(all.map(i => [i.id, i])); renderIncidents(); }
+function addEvent(e) {
+  const txt = { alarm: 'ТРЕВОГА', pre_alarm: 'внимание', restore: 'норма', offline: 'НЕТ СВЯЗИ', link_restored: 'связь восстановлена', fault: 'неисправность', sim_connected: 'симулятор подключился' }[e.event] || e.event;
+  const c = { alarm: '#fca5a5', pre_alarm: '#fde047', offline: '#cbd5e1', link_restored: '#86efac', restore: '#86efac' }[e.event] || 'inherit';
+  const d = document.createElement('div'); d.innerHTML = `<span class="t">${fmtT(e.ts)}</span><span style="color:${c}">${e.device_id ? `<b>${e.device_id}</b> (${zones[e.zone_id] || e.zone_id}) — ` : ''}${txt}</span>`;
+  $('events').prepend(d); while ($('events').children.length > 150) $('events').lastChild.remove();
+}
+const people = {};
+function renderPeople() {
+  const INJ = { none: ['ok', 'норма'], light: ['warn', 'лёгкая'], moderate: ['warn', 'средняя'], severe: ['bad', 'тяжёлая'], critical: ['bad', 'критич.'] };
+  const ST = { idle: 'на месте', alerted: 'оповещён', evacuating: 'эвакуируется', evacuated: 'снаружи', incapacitated: 'без сознания', trapped: 'заблокирован' };
+  const rows = Object.values(people).sort((a, b) => a.occupant_id.localeCompare(b.occupant_id));
+  if (!rows.length) return;
+  $('people').innerHTML = rows.map(o => { const [c, t] = INJ[o.injury] || ['off', o.injury]; return `<tr><td>${o.name || o.occupant_id}</td><td>${ST[o.status] || o.status}</td><td>${zones[o.zone_id] || o.zone_id || '—'}</td><td><span class="pill ${c}">${t}</span></td></tr>`; }).join('');
+}
+async function renderTasks() {
+  const t = await api('/api/repair-tasks');
+  $('tasks').innerHTML = t.length ? t.map(x => `<div style="padding:4px 0;border-bottom:1px solid var(--line)"><b>${x.device_id}</b> — ${x.reason} <span class="muted">${fmtT(x.created_at)}</span> <button onclick="closeTask(${x.id})">Выполнено</button></div>`).join('') : '<div class="empty">Нет открытых задач</div>';
+}
+async function closeTask(id) { await api(`/api/repair-tasks/${id}/close`, { method: 'POST', body: JSON.stringify({ actor: actor(), comment: 'Заменён/проверен' }) }); renderTasks(); refreshStats(); }
+async function renderInsp() {
+  const x = (await api('/api/inspections')).filter(i => !i.done_at).slice(0, 8);
+  $('insp').innerHTML = x.map(i => `<div style="padding:4px 0;border-bottom:1px solid var(--line)">${i.overdue ? '<span class="pill bad">просрочено</span> ' : ''}<b>${i.device_id}</b> до ${i.due_date} <button onclick="doneInsp(${i.id})">Проверено</button></div>`).join('');
+}
+async function doneInsp(id) { await api(`/api/inspections/${id}/done`, { method: 'POST', body: JSON.stringify({ actor: actor() }) }); renderInsp(); refreshStats(); }
+async function refreshStats() {
+  const s = await api('/api/stats');
+  $('sOnline').textContent = s.devices_online_pct + '%'; $('sReact').textContent = s.avg_reaction_s != null ? s.avg_reaction_s + ' с' : '—';
+  $('sFalse').textContent = s.false_alarm_pct != null ? s.false_alarm_pct + '%' : '—'; $('sOver').textContent = s.overdue_inspections;
+}
+document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = async () => {
+  const r = await api('/api/commands', { method: 'POST', body: JSON.stringify({ action: b.dataset.cmd, actor: actor() }) });
+  if (!r.sent_to_simulators) alert('Команда записана, но симулятор не подключён');
+});
+function showCall(c) {
+  const d = document.createElement('div'); d.className = 'callcard';
+  d.innerHTML = `<b>Вызов 101 — DEMO</b> <span class="muted">(реальный вызов не отправляется)</span><br>${c.text}<br><span class="muted">Инцидент #${c.incident_id}</span> <button style="float:right" onclick="this.parentNode.remove()">Скрыть</button>`;
+  $('callcards').prepend(d);
+}
+
+function renderRisk(zs) {
+  if (!zs || !zs.length) return;
+  const col = (l) => l === 'high' ? '#f97316' : l === 'elevated' ? '#facc15' : '#22c55e';
+  $('ai').innerHTML = zs.map(r => `<div class="airow"><span>${zones[r.zone_id] || r.zone}</span><span class="bar"><i style="width:${Math.max(2, r.prob * 100)}%;background:${col(r.level)}"></i></span><b style="color:${col(r.level)}">${(r.prob * 100).toFixed(0)}%</b>
+    ${r.reasons && r.reasons.length ? `<div class="aiwhy">${r.reasons.join(' · ')}</div>` : r.note ? `<div class="aiwhy">${r.note}</div>` : ''}</div>`).join('');
+}
+async function boot() {
+  site = await api('/api/site'); users = await api('/api/users');
+  zones = Object.fromEntries(site.zones.map(z => [z.zone_id, z.name.split(' ·')[0]]));
+  devices = Object.fromEntries(site.devices.map(d => [d.device_id, d])); renderDevices();
+  await reloadIncident();
+  (await api('/api/events?limit=60')).reverse().forEach(addEvent);
+  (await api('/api/occupants')).forEach(o => people[o.occupant_id] = o); renderPeople();
+  renderTasks(); renderInsp(); refreshStats(); connect();
+  api('/api/risk').then(r => r.enabled ? renderRisk(r.zones) : ($('ai').innerHTML = '<div class="empty">AI-модель не загружена</div>'));
+  api('/api/ai/model').then(c => { const t = c.test; $('aicard').innerHTML = `Модель: градиентный бустинг, обучена на <b>синтетических</b> данных. На отложенной выборке предупреждает в ${t.warned_before_ignition_pct}% случаев медленного развития пожара, в среднем за ${t.median_lead_min} мин; ложных прогнозов ≈${t.false_forecasts_per_zone_per_day} на зону в сутки. Подсказка оператору, не замена сигнализации.`; }).catch(() => {});
+}
+let wsUi;
+function connect() {
+  wsUi = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/ui');
+  wsUi.onopen = () => { $('ui').textContent = 'панель: онлайн'; $('ui').className = 'pill ok'; };
+  wsUi.onclose = () => { $('ui').textContent = 'панель: нет связи'; $('ui').className = 'pill bad'; setTimeout(connect, 2000); };
+  wsUi.onmessage = (m) => {
+    const { type, data } = JSON.parse(m.data);
+    if (type === 'telemetry') { const d = devices[data.device_id]; if (d) { d.last_values = data.values; d.last_seen = data.ts; d.state = data.state; } }
+    else if (type === 'device') { devices[data.device_id] = data; renderDevices(); flash(data.device_id); refreshStats(); }
+    else if (type === 'incident') { reloadIncident(data.id); refreshStats(); }
+    else if (type === 'event') addEvent(data);
+    else if (type === 'occupant') { people[data.occupant_id] = data; }
+    else if (type === 'repair_task' || type === 'inspection') { renderTasks(); renderInsp(); refreshStats(); }
+    else if (type === 'call_101_demo') showCall(data);
+    else if (type === 'risk') renderRisk(data.zones);
+    else if (type === 'sim_status') { $('sim').textContent = data.connected ? `симулятор: подключён (${data.connected})` : 'симулятор: не подключён'; $('sim').className = 'pill ' + (data.connected ? 'ok' : 'off'); }
+    else if (type === 'site_changed') api('/api/site').then(s => { site = s; s.devices.forEach(d => devices[d.device_id] = { ...devices[d.device_id], ...d }); renderDevices(); });
+  };
+}
+setInterval(() => { renderDevices(); renderPeople(); }, 1500);
+boot().catch(e => { document.body.insertAdjacentHTML('afterbegin', `<div style="padding:10px;background:#3a1717">Не удалось загрузить данные: ${e.message}</div>`); });
+</script>
+</body>
+</html>

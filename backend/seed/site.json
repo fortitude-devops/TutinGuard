@@ -1,0 +1,412 @@
+{
+ "site_id": "office-01",
+ "name": "Офис IT-компании (демо)",
+ "address": "г. Астана, ул. Тестовая, 1 (тестовые данные)",
+ "alert_type": 3,
+ "zones": [
+  {
+   "zone_id": "os",
+   "name": "Опенспейс",
+   "floor": 1,
+   "type": "openspace",
+   "max_people": 12,
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     9,
+     0
+    ],
+    [
+     9,
+     6.5
+    ],
+    [
+     0,
+     6.5
+    ]
+   ]
+  },
+  {
+   "zone_id": "meet",
+   "name": "Переговорная",
+   "floor": 1,
+   "type": "meeting",
+   "max_people": 8,
+   "polygon": [
+    [
+     9,
+     0
+    ],
+    [
+     14,
+     0
+    ],
+    [
+     14,
+     4.5
+    ],
+    [
+     9,
+     4.5
+    ]
+   ]
+  },
+  {
+   "zone_id": "dir",
+   "name": "Кабинет директора",
+   "floor": 1,
+   "type": "office",
+   "max_people": 3,
+   "polygon": [
+    [
+     9,
+     4.5
+    ],
+    [
+     14,
+     4.5
+    ],
+    [
+     14,
+     7.5
+    ],
+    [
+     9,
+     7.5
+    ]
+   ]
+  },
+  {
+   "zone_id": "srv",
+   "name": "Серверная",
+   "floor": 1,
+   "type": "server",
+   "max_people": 1,
+   "polygon": [
+    [
+     9,
+     7.5
+    ],
+    [
+     14,
+     7.5
+    ],
+    [
+     14,
+     10
+    ],
+    [
+     9,
+     10
+    ]
+   ]
+  },
+  {
+   "zone_id": "kit",
+   "name": "Кухня",
+   "floor": 1,
+   "type": "kitchen",
+   "max_people": 6,
+   "polygon": [
+    [
+     0,
+     6.5
+    ],
+    [
+     4,
+     6.5
+    ],
+    [
+     4,
+     10
+    ],
+    [
+     0,
+     10
+    ]
+   ]
+  },
+  {
+   "zone_id": "hall",
+   "name": "Ресепшн · холл",
+   "floor": 1,
+   "type": "hall",
+   "max_people": 10,
+   "polygon": [
+    [
+     4,
+     6.5
+    ],
+    [
+     9,
+     6.5
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     4,
+     10
+    ]
+   ]
+  }
+ ],
+ "devices": [
+  {
+   "device_id": "SMK-OS-01",
+   "zone_id": "os",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 4.6,
+    "y": 2.86,
+    "z": 0.9
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-OS-02",
+   "zone_id": "os",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 7.75,
+    "y": 2.86,
+    "z": 0.9
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-OS-03",
+   "zone_id": "os",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 1.75,
+    "y": 2.86,
+    "z": 5.4
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-OS-04",
+   "zone_id": "os",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 6.25,
+    "y": 2.86,
+    "z": 5.4
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-MT-01",
+   "zone_id": "meet",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 10.0,
+    "y": 2.86,
+    "z": 3.75
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-MT-02",
+   "zone_id": "meet",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 13.25,
+    "y": 2.86,
+    "z": 3.75
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-DR-01",
+   "zone_id": "dir",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 10.0,
+    "y": 2.86,
+    "z": 6.6
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-DR-02",
+   "zone_id": "dir",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 13.3,
+    "y": 2.86,
+    "z": 5.0
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-SR-01",
+   "zone_id": "srv",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 10.1,
+    "y": 2.86,
+    "z": 9.0
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "HT-SR-01",
+   "zone_id": "srv",
+   "device_type": "heat",
+   "model": "С2000-ИП (sim)",
+   "pos": {
+    "x": 11.6,
+    "y": 2.86,
+    "z": 9.3
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-HL-01",
+   "zone_id": "hall",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 4.9,
+    "y": 2.86,
+    "z": 7.9
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "SMK-HL-02",
+   "zone_id": "hall",
+   "device_type": "smoke",
+   "model": "ДИП-34А (sim)",
+   "pos": {
+    "x": 8.25,
+    "y": 2.86,
+    "z": 9.25
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "HT-KT-01",
+   "zone_id": "kit",
+   "device_type": "heat",
+   "model": "С2000-ИП (sim)",
+   "pos": {
+    "x": 2.25,
+    "y": 2.86,
+    "z": 7.75
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "HT-KT-02",
+   "zone_id": "kit",
+   "device_type": "heat",
+   "model": "С2000-ИП (sim)",
+   "pos": {
+    "x": 2.9,
+    "y": 2.86,
+    "z": 9.1
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "GL-KT-01",
+   "zone_id": "kit",
+   "device_type": "gas_lel",
+   "model": "Газоанализатор CH₄ (sim)",
+   "pos": {
+    "x": 0.75,
+    "y": 2.55,
+    "z": 9.885
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "CO-KT-01",
+   "zone_id": "kit",
+   "device_type": "gas_co",
+   "model": "Датчик CO (sim)",
+   "pos": {
+    "x": 0.115,
+    "y": 1.55,
+    "z": 7.0
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "MCP-OS-01",
+   "zone_id": "os",
+   "device_type": "manual",
+   "model": "ИПР 513-3АМ (sim)",
+   "pos": {
+    "x": 0.115,
+    "y": 1.5,
+    "z": 2.3
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "MCP-HL-01",
+   "zone_id": "hall",
+   "device_type": "manual",
+   "model": "ИПР 513-3АМ (sim)",
+   "pos": {
+    "x": 7.1,
+    "y": 1.5,
+    "z": 9.885
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "PNL-01",
+   "zone_id": "hall",
+   "device_type": "panel",
+   "model": "С2000М + С2000-КДЛ (sim)",
+   "pos": {
+    "x": 4.075,
+    "y": 1.5,
+    "z": 9.3
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "MLT-OS-01",
+   "zone_id": "os",
+   "device_type": "multi",
+   "model": "Ajax FireProtect 2 (sim)",
+   "pos": {
+    "x": 2.5,
+    "y": 2.86,
+    "z": 3.75
+   },
+   "installed": "2025-03-01"
+  },
+  {
+   "device_id": "MLT-DR-01",
+   "zone_id": "dir",
+   "device_type": "multi",
+   "model": "Ajax FireProtect 2 (sim)",
+   "pos": {
+    "x": 11.6,
+    "y": 2.86,
+    "z": 6.0
+   },
+   "installed": "2025-03-01"
+  }
+ ]
+}

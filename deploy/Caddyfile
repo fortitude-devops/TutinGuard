@@ -1,0 +1,8 @@
+{$DOMAIN} {
+	encode gzip
+	# Uncomment to protect the operator panel and API with a login (hash: docker compose exec caddy caddy hash-password)
+	# basic_auth /monitor/* {
+	# 	operator <bcrypt-hash>
+	# }
+	reverse_proxy backend:8000
+}

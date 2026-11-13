@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TutinGuard — 3D-офис (демо)</title>
+<style>
+  :root{--bg:#14181c;--card:rgba(20,24,29,.86);--line:rgba(255,255,255,.09);--tx:#e8ecef;--mut:#9aa5ae;--ok:#22c55e;--warn:#facc15;--bad:#ef4444;--acc:#2dd4bf}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none}
+  .card{pointer-events:auto;position:absolute;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;backdrop-filter:blur(6px);max-height:calc(100% - 24px);overflow:auto}
+  #left{left:12px;top:12px;width:290px}
+  #right{right:12px;top:12px;width:330px}
+  h4{margin:12px 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);font-weight:600}
+  .brand{font-size:18px;font-weight:700;letter-spacing:.02em}
+  .brand span{font-size:12px;font-weight:500;color:var(--mut);margin-left:6px}
+  .muted{color:var(--mut)} .small{font-size:11.5px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+  #clock{font:600 15px ui-monospace,Menlo,monospace}
+  .pill{padding:2px 9px;border-radius:999px;font-weight:600;font-size:12px}
+  .pill.ok{background:rgba(34,197,94,.15);color:#4ade80}.pill.warn{background:rgba(250,204,21,.15);color:#fde047}.pill.bad{background:rgba(239,68,68,.2);color:#fca5a5;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.55}}
+  button,select{font:inherit;color:var(--tx);background:#232a31;border:1px solid var(--line);border-radius:8px;padding:6px 9px;cursor:pointer}
+  button:hover{background:#2c353e} button.on{border-color:var(--acc);color:var(--acc)}
+  .hz{display:flex;width:100%;text-align:left;gap:8px;align-items:flex-start;margin-bottom:5px}
+  .hz b{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:50%;background:#c62828;color:#fff;font-size:11px}
+  .hz small{display:block;color:var(--mut)}
+  .hz.active{border-color:#ef4444;background:rgba(239,68,68,.12)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chk{display:flex;gap:6px;align-items:center;margin-top:8px}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  td,th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:right;font-size:12px}
+  th{color:var(--mut);font-weight:500} td:first-child,th:first-child{text-align:left}
+  td.w{color:var(--warn)} td.b{color:#fca5a5;font-weight:600}
+  #log{max-height:190px;overflow:auto;font-size:12px}
+  #log div{padding:3px 0;border-bottom:1px solid var(--line)}
+  #log .t{color:var(--mut);font-family:ui-monospace,Menlo,monospace;margin-right:6px}
+  .e-alarm{color:#fca5a5}.e-pre{color:#fde047}.e-info{color:#93c5fd}.e-ok{color:#86efac}.e-off{color:#c4b5fd}
+  #people{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:12px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+  #legend{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;pointer-events:auto;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;display:flex;gap:14px;font-size:12px;white-space:nowrap}
+  #tip{position:absolute;pointer-events:none;background:rgba(10,12,15,.92);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;display:none;max-width:260px;white-space:pre-line}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;color:var(--mut);background:var(--bg)}
+  @media (max-width:900px){#right{display:none}#legend{display:none}#left{width:250px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="hud">
+  <div class="card" id="left">
+    <div class="brand">TutinGuard<span>3D-офис · демо</span></div>
+    <div class="muted small">Симуляция. Все данные тестовые.</div>
+    <div class="row"><span id="clock">00:00</span><span id="status" class="pill ok">Норма</span></div>
+    <div class="row small"><span class="muted">Сервер TutinGuard</span><span id="link" class="pill warn" title="">подключение…</span></div>
+    <h4>Источники опасности</h4>
+    <div id="hazards"></div>
+    <h4>Управление</h4>
+    <div class="grid2">
+      <button id="btnEvac">Эвакуация</button><button id="btnReset">Сброс</button>
+      <button id="btnWalls">Низкие стены</button><button id="btnTop">Вид сверху</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="chkAlerts" checked> Оповещение (сирены) работает</label>
+    <div class="row">Скорость времени
+      <select id="selSpeed"><option value="1">×1</option><option value="5" selected>×5</option><option value="10">×10</option><option value="60">×60 (1 с = 1 мин)</option></select>
+    </div>
+    <p class="muted small" style="margin:10px 0 0">Клик по комнате — приблизить. Клик по красной цифре — запустить источник. Клик по датчику — оборвать или вернуть связь. Колесо мыши — зум.</p>
+  </div>
+  <div class="card" id="right">
+    <h4 style="margin-top:0">Показания по зонам</h4>
+    <table id="ztab"></table>
+    <h4>Журнал событий</h4>
+    <div id="log"></div>
+    <h4>Люди (FED — доза дыма и тепла)</h4>
+    <div id="people"></div>
+  </div>
+  <div id="legend">
+    <span><span class="dot" style="background:#22c55e"></span>норма</span>
+    <span><span class="dot" style="background:#facc15"></span>внимание</span>
+    <span><span class="dot" style="background:#ef4444"></span>тревога</span>
+    <span><span class="dot" style="background:#6b7280"></span>нет связи</span>
+    <span><span class="dot" style="background:#c62828;border-radius:3px"></span>источник опасности</span>
+  </div>
+  <div id="tip"></div>
+  <div id="loading">Загрузка сцены…</div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+const PI = Math.PI, TAU = PI * 2, V3 = THREE.Vector3;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+
+// ================= Renderer, scene, camera =================
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.prepend(renderer.domElement);
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1f24);
+scene.fog = new THREE.Fog(0x1a1f24, 40, 80);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 200);
+camera.position.set(19, 17, 21);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(7, 0.4, 5);
+controls.enableDamping = true;
+controls.maxPolarAngle = 1.48;
+controls.minDistance = 3; controls.maxDistance = 45;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xf4f7ff, 0x5b5146, 1.0));
+const sun = new THREE.DirectionalLight(0xfff1de, 1.9);
+sun.position.set(16, 22, 9); sun.target.position.set(7, 0, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 5, far: 60 });
+sun.shadow.camera.updateProjectionMatrix(); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.025;
+scene.add(sun, sun.target);
+const fill = new THREE.DirectionalLight(0xbfd6ff, 0.35); fill.position.set(-10, 12, -6); scene.add(fill);
+
+// ================= Procedural textures =================
+function ctex(w, h, draw, { repeat = [1, 1], srgb = true } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = Math.min(8, maxAniso);
+  return t;
+}
+function noise(g, w, h, n, a, light = true) {
+  for (let i = 0; i < n; i++) { const v = light ? 255 : 0; g.fillStyle = `rgba(${v},${v},${v},${rnd() * a})`; g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 1.5, 1 + rnd() * 1.5); }
+}
+const TEX = {
+  parquet: ctex(512, 512, (g, w, h) => {
+    const rows = 16, ph = h / rows;
+    for (let r = 0; r < rows; r++) {
+      let x = -rnd() * 220;
+      while (x < w) {
+        const len = 140 + rnd() * 200, l = 50 + rnd() * 10, hue = 29 + rnd() * 7, s = 36 + rnd() * 14;
+        g.fillStyle = `hsl(${hue},${s}%,${l}%)`; g.fillRect(x, r * ph, len, ph);
+        for (let k = 0; k < 7; k++) {
+          g.strokeStyle = `rgba(90,55,25,${0.05 + rnd() * 0.09})`; g.lineWidth = 1; g.beginPath();
+          const yy = r * ph + rnd() * ph; g.moveTo(x, yy);
+          g.bezierCurveTo(x + len * .3, yy + rnd() * 4 - 2, x + len * .6, yy + rnd() * 4 - 2, x + len, yy); g.stroke();
+        }
+        g.fillStyle = 'rgba(45,28,12,.4)'; g.fillRect(x, r * ph, 1.5, ph); x += len;
+      }
+      g.fillStyle = 'rgba(45,28,12,.35)'; g.fillRect(0, r * ph, w, 1);
+    }
+  }),
+  carpet: ctex(256, 256, (g, w, h) => {
+    g.fillStyle = '#5c6670'; g.fillRect(0, 0, w, h);
+    for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) {
+      const x0 = tx * w / 2, y0 = ty * h / 2, vert = (tx + ty) % 2;
+      g.strokeStyle = 'rgba(255,255,255,.035)';
+      for (let i = 0; i < 64; i += 3) { g.beginPath(); if (vert) { g.moveTo(x0 + i * 2, y0); g.lineTo(x0 + i * 2, y0 + h / 2); } else { g.moveTo(x0, y0 + i * 2); g.lineTo(x0 + w / 2, y0 + i * 2); } g.stroke(); }
+    }
+    noise(g, w, h, 9000, .09); noise(g, w, h, 6000, .12, false);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, 0, w, 1); g.fillRect(0, h / 2, w, 1); g.fillRect(0, 0, 1, h); g.fillRect(w / 2, 0, 1, h);
+  }),
+  kitTile: ctex(256, 256, (g, w, h) => tiles(g, w, h, 4, [232, 226, 214], '#b9b0a2')),
+  techTile: ctex(256, 256, (g, w, h) => tiles(g, w, h, 2, [176, 182, 188], '#6c737a', true)),
+  wall: ctex(256, 256, (g, w, h) => { g.fillStyle = '#f2f0eb'; g.fillRect(0, 0, w, h); noise(g, w, h, 5000, .05, false); noise(g, w, h, 3000, .08); }),
+  woodLight: ctex(256, 256, (g, w, h) => woodDraw(g, w, h, 38, 34, 70)),
+  walnut: ctex(256, 256, (g, w, h) => woodDraw(g, w, h, 22, 38, 30)),
+  felt: ctex(128, 128, (g, w, h) => { g.fillStyle = '#5d8f7b'; g.fillRect(0, 0, w, h); noise(g, w, h, 3000, .1); noise(g, w, h, 3000, .12, false); }),
+  fabric: ctex(128, 128, (g, w, h) => { g.fillStyle = '#3c434b'; g.fillRect(0, 0, w, h); for (let i = 0; i < w; i += 2) { g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(i, 0, 1, h); g.fillRect(0, i, w, 1); } noise(g, w, h, 2000, .08); }),
+  ground: ctex(256, 256, (g, w, h) => { g.fillStyle = '#2b3137'; g.fillRect(0, 0, w, h); noise(g, w, h, 4000, .05); g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(0, 0, w, 2); g.fillRect(0, 0, 2, h); }, { repeat: [30, 30] }),
+};
+function tiles(g, w, h, n, rgb, grout, dots = false) {
+  g.fillStyle = grout; g.fillRect(0, 0, w, h); const s = w / n;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const d = (rnd() - .5) * 14; g.fillStyle = `rgb(${rgb[0] + d},${rgb[1] + d},${rgb[2] + d})`; g.fillRect(x * s + 2, y * s + 2, s - 4, s - 4);
+    if (dots) { g.fillStyle = 'rgba(0,0,0,.25)'; for (const [a, b] of [[.15, .15], [.85, .15], [.15, .85], [.85, .85]]) g.fillRect(x * s + a * s - 1.5, y * s + b * s - 1.5, 3, 3); }
+  }
+  noise(g, w, h, 3000, .06);
+}
+function woodDraw(g, w, h, hue, sat, l) {
+  g.fillStyle = `hsl(${hue},${sat}%,${l}%)`; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 90; i++) { g.strokeStyle = `hsla(${hue},${sat}%,${l - 15}%,${.06 + rnd() * .12})`; g.lineWidth = .5 + rnd() * 1.5; g.beginPath(); const y = rnd() * h; g.moveTo(0, y); g.bezierCurveTo(w * .3, y + rnd() * 6 - 3, w * .7, y + rnd() * 6 - 3, w, y); g.stroke(); }
+}
+function screenTex(kind) {
+  return ctex(256, 150, (g, w, h) => {
+    if (kind === 'code') {
+      g.fillStyle = '#1e1f29'; g.fillRect(0, 0, w, h); g.fillStyle = '#2a2c3a'; g.fillRect(0, 0, 40, h);
+      const cols = ['#82aaff', '#c3e88d', '#f78c6c', '#c792ea', '#89ddff', '#ffcb6b'];
+      for (let y = 8; y < h - 6; y += 8) { let x = 46 + (rnd() * 4 | 0) * 10; const n = 1 + (rnd() * 4 | 0); for (let k = 0; k < n; k++) { const len = 12 + rnd() * 50; g.fillStyle = cols[rnd() * cols.length | 0]; g.fillRect(x, y, len, 4); x += len + 6; } }
+    } else if (kind === 'dash') {
+      g.fillStyle = '#f4f6f8'; g.fillRect(0, 0, w, h); g.fillStyle = '#0f6e56'; g.fillRect(0, 0, w, 16);
+      for (let i = 0; i < 3; i++) { g.fillStyle = '#fff'; g.fillRect(8 + i * 82, 24, 74, 34); g.fillStyle = '#185fa5'; g.fillRect(14 + i * 82, 34, 30 + rnd() * 30, 12); }
+      g.fillStyle = '#fff'; g.fillRect(8, 66, 240, 76); g.strokeStyle = '#d85a30'; g.lineWidth = 2; g.beginPath(); for (let x = 0; x <= 220; x += 20) g.lineTo(18 + x, 130 - rnd() * 50); g.stroke();
+    } else {
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = '#e6edf5'; g.fillRect(0, 0, 70, h);
+      for (let y = 10; y < h; y += 14) { g.fillStyle = '#c9d3dd'; g.fillRect(78, y, 60 + rnd() * 100, 5); g.fillStyle = '#9aa7b4'; g.fillRect(8, y, 50, 5); }
+    }
+  });
+}
+const SCREENS = ['code', 'dash', 'mail'].map(k => screenTex(k));
+function textCanvas(text, { font = 'bold 30px system-ui', fg = '#fff', bg = 'rgba(18,22,27,.82)', pad = 14, r = 12 } = {}) {
+  const c = document.createElement('canvas'), g = c.getContext('2d'); g.font = font;
+  const tw = Math.ceil(g.measureText(text).width); c.width = tw + pad * 2; c.height = 52;
+  g.font = font; g.fillStyle = bg; g.beginPath(); g.roundRect(0, 0, c.width, c.height, r); g.fill();
+  g.fillStyle = fg; g.textBaseline = 'middle'; g.fillText(text, pad, c.height / 2 + 1); return c;
+}
+const RADIAL = ctex(64, 64, (g, w) => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.4, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); }, { srgb: false });
+
+// ================= Materials =================
+const std = (o) => new THREE.MeshStandardMaterial({ roughness: .7, ...o });
+const M = {
+  wall: std({ map: TEX.wall, roughness: .95 }),
+  cap: std({ color: 0x353b42, roughness: .85 }),
+  base: std({ color: 0x5a6068, roughness: .6 }),
+  wood: std({ map: TEX.woodLight, roughness: .55 }),
+  walnut: std({ map: TEX.walnut, roughness: .5 }),
+  metal: std({ color: 0xd5d9dd, roughness: .35, metalness: .6 }),
+  white: std({ color: 0xf2f2f0, roughness: .5 }),
+  darkMetal: std({ color: 0x2c3035, roughness: .45, metalness: .55 }),
+  black: std({ color: 0x17191c, roughness: .45 }),
+  plastic: std({ color: 0xe6e6e3, roughness: .45 }),
+  grey: std({ color: 0x9aa1a8, roughness: .5 }),
+  fabric: std({ map: TEX.fabric, roughness: .9 }),
+  fabricTeal: std({ map: TEX.fabric, color: 0x7fd3c2, roughness: .9 }),
+  fabricBlue: std({ map: TEX.fabric, color: 0x9bb8e6, roughness: .9 }),
+  felt: std({ map: TEX.felt, roughness: .95 }),
+  leather: std({ color: 0x3b2b24, roughness: .45 }),
+  glass: std({ color: 0xcfe7f3, roughness: .05, metalness: .1, transparent: true, opacity: .2, depthWrite: false }),
+  glassBlue: std({ color: 0x7fb7e6, roughness: .1, transparent: true, opacity: .55 }),
+  alu: std({ color: 0xb9c0c7, roughness: .3, metalness: .75 }),
+  cabinet: std({ color: 0xf4f3ef, roughness: .45 }),
+  stone: std({ color: 0xcfc7bb, roughness: .4 }),
+  blackGlass: std({ color: 0x101214, roughness: .15, metalness: .3 }),
+  pipe: std({ color: 0xe8b900, roughness: .4, metalness: .25 }),
+  red: std({ color: 0xc62828, roughness: .45 }),
+  leaf1: std({ color: 0x4f8a3c, roughness: .8, flatShading: true }),
+  leaf2: std({ color: 0x3a7346, roughness: .8, flatShading: true }),
+  pot: std({ color: 0xd8d2c9, roughness: .6 }),
+  terracotta: std({ color: 0xb4643f, roughness: .7 }),
+  soil: std({ color: 0x3b2d22, roughness: 1 }),
+  rubber: std({ color: 0x141414, roughness: .7 }),
+  paper: std({ color: 0xfafaf7, roughness: .9 }),
+  ground: std({ map: TEX.ground, roughness: 1 }),
+  slab: std({ color: 0x3d434a, roughness: .9 }),
+  led: new THREE.MeshBasicMaterial({ color: 0x3b82f6 }),
+  screens: SCREENS.map(t => new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .9, roughness: .3 })),
+  // hazard-specific materials (separate so they can glow)
+  hazCable: std({ color: 0x141414, roughness: .7, emissive: 0xff5a00, emissiveIntensity: 0 }),
+  hazStrip: std({ color: 0xf2f2f0, roughness: .5, emissive: 0xff5a00, emissiveIntensity: 0 }),
+  hazPanel: std({ color: 0xb8bec4, roughness: .45, metalness: .4, emissive: 0xff5a00, emissiveIntensity: 0 }),
+  hazPrinter: std({ color: 0xd9dbdd, roughness: .5, emissive: 0xff5a00, emissiveIntensity: 0 }),
+  hazUPS: std({ color: 0x1d2024, roughness: .45, emissive: 0xff3a00, emissiveIntensity: 0 }),
+  microWin: std({ color: 0x0c0c0c, emissive: 0xffb347, emissiveIntensity: .15, roughness: .2 }),
+};
+
+// ================= Geometry helpers =================
+const GC = new Map();
+function RB(w, h, d, r = .012) {
+  r = Math.min(r, Math.min(w, h, d) / 2 - .0005);
+  const k = `${w}|${h}|${d}|${r}`;
+  if (!GC.has(k)) GC.set(k, r > .001 ? new RoundedBoxGeometry(w, h, d, 2, r) : new THREE.BoxGeometry(w, h, d));
+  return GC.get(k);
+}
+function CYL(rt, rb, h, s = 16) { const k = `c|${rt}|${rb}|${h}|${s}`; if (!GC.has(k)) GC.set(k, new THREE.CylinderGeometry(rt, rb, h, s)); return GC.get(k); }
+function mesh(geo, mat, x = 0, y = 0, z = 0, parent, cast = true) {
+  const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = true;
+  if (parent) parent.add(m); return m;
+}
+const S = new THREE.Group();   // static, will be merged
+const D = new THREE.Group();   // dynamic / interactive
+scene.add(D);
+const rb = (w, h, d, mat, x, y, z, r = .012, p = S) => mesh(RB(w, h, d, r), mat, x, y, z, p);
+const cyl = (rt, rbt, h, mat, x, y, z, p = S, s = 16) => mesh(CYL(rt, rbt, h, s), mat, x, y, z, p);
+
+// Merge static meshes by material: hundreds of meshes → a few dozen draw calls
+function mergeGroup(root) {
+  root.updateMatrixWorld(true);
+  const buckets = new Map();
+  root.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || o.userData.noMerge) return;
+    const key = o.material.uuid + '|' + (o.castShadow ? 1 : 0);
+    if (!buckets.has(key)) buckets.set(key, { mat: o.material, cast: o.castShadow, geos: [] });
+    let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+    for (const n of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(n)) g.deleteAttribute(n);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    if (!g.attributes.normal) g.computeVertexNormals();
+    g.clearGroups(); g.applyMatrix4(o.matrixWorld); buckets.get(key).geos.push(g);
+  });
+  const out = new THREE.Group();
+  for (const b of buckets.values()) {
+    const merged = mergeGeometries(b.geos, false);
+    if (!merged) continue;
+    const m = new THREE.Mesh(merged, b.mat); m.castShadow = b.cast; m.receiveShadow = true; out.add(m);
+  }
+  return out;
+}
+
+// ================= Layout =================
+const WALL_H_FULL = 2.9, WALL_H_LOW = 1.15;
+let wallH = WALL_H_FULL;
+const ZONES = [
+  { id: 'os', name: 'Опенспейс', x0: 0, z0: 0, x1: 9, z1: 6.5, floor: 'carpet', tile: 1 },
+  { id: 'meet', name: 'Переговорная', x0: 9, z0: 0, x1: 14, z1: 4.5, floor: 'parquet', tile: 2 },
+  { id: 'dir', name: 'Кабинет директора', x0: 9, z0: 4.5, x1: 14, z1: 7.5, floor: 'parquet', tile: 2 },
+  { id: 'srv', name: 'Серверная', x0: 9, z0: 7.5, x1: 14, z1: 10, floor: 'techTile', tile: 1.2 },
+  { id: 'kit', name: 'Кухня', x0: 0, z0: 6.5, x1: 4, z1: 10, floor: 'kitTile', tile: 1.2 },
+  { id: 'hall', name: 'Ресепшн · холл', x0: 4, z0: 6.5, x1: 9, z1: 10, floor: 'parquet', tile: 2 },
+];
+const ZMAP = Object.fromEntries(ZONES.map(z => [z.id, z]));
+const zoneAt = (x, z) => ZONES.find(q => x >= q.x0 && x <= q.x1 && z >= q.z0 && z <= q.z1) || null;
+
+// ground & slab
+const ground = mesh(new THREE.PlaneGeometry(90, 90), M.ground, 7, -0.13, 5, scene, false); ground.rotation.x = -PI / 2;
+rb(14.6, .12, 10.6, M.slab, 7, -0.065, 5, .02);
+
+// floors (kept separate: they are click targets)
+const floors = [];
+for (const z of ZONES) {
+  const w = z.x1 - z.x0, h = z.z1 - z.z0;
+  const t = TEX[z.floor].clone(); t.needsUpdate = true; t.repeat.set(w / z.tile, h / z.tile);
+  const m = mesh(new THREE.PlaneGeometry(w, h), std({ map: t, roughness: z.floor === 'parquet' ? .55 : .9 }), (z.x0 + z.x1) / 2, .002, (z.z0 + z.z1) / 2, D, false);
+  m.rotation.x = -PI / 2; m.userData.pick = { kind: 'zone', ref: z }; floors.push(m); z.floorMesh = m; m.material.emissive = new THREE.Color(0xff6a00); m.material.emissiveIntensity = 0;
+}
+
+// ---------- Walls ----------
+// opening: [from, to, bottom, top, type]
+const WALLS = [
+  { axis: 'x', c: 0, a0: -0.1, a1: 14.1, t: .2, ops: [[1.5, 2.5, 0, 2.15, 'exit', 1], [3.3, 4.8, .9, 2.3, 'win'], [5.8, 7.3, .9, 2.3, 'win'], [10.5, 12.8, .9, 2.3, 'win']] },
+  { axis: 'x', c: 10, a0: -0.1, a1: 14.1, t: .2, ops: [[5.75, 6.75, 0, 2.2, 'exit', -1]] },
+  { axis: 'z', c: 0, a0: .1, a1: 9.9, t: .2, ops: [[3.2, 4.8, .9, 2.3, 'win'], [7.4, 8.9, .9, 2.3, 'win']] },
+  { axis: 'z', c: 14, a0: .1, a1: 9.9, t: .2, ops: [[5.3, 6.9, .9, 2.3, 'win']] },
+  { axis: 'z', c: 9, a0: .1, a1: 4.5, t: .06, kind: 'glass', ops: [[2, 3, 0, 2.1, 'door', 1]] },
+  { axis: 'z', c: 9, a0: 4.5, a1: 9.9, t: .12, ops: [[5.2, 6.1, 0, 2.1, 'door', -1], [8, 9, 0, 2.1, 'door', 1]] },
+  { axis: 'x', c: 4.5, a0: 9.06, a1: 13.9, t: .12, ops: [] },
+  { axis: 'x', c: 7.5, a0: 9.06, a1: 13.9, t: .12, ops: [] },
+  { axis: 'x', c: 6.5, a0: .1, a1: 8.94, t: .12, ops: [[6, 7, 0, 2.1, 'door', 1]] },
+  { axis: 'z', c: 4, a0: 6.56, a1: 9.9, t: .12, ops: [[7.5, 8.5, 0, 2.1, 'door', 1]] },
+];
+let wallsMerged = null; const doorsGroup = new THREE.Group(); D.add(doorsGroup);
+const doorLeaves = []; const exitSigns = [];
+function buildWalls() {
+  if (wallsMerged) { scene.remove(wallsMerged); wallsMerged.traverse(o => o.geometry && o.geometry.dispose()); }
+  doorsGroup.clear(); doorLeaves.length = 0;
+  const G = new THREE.Group(); const H = wallH;
+  for (const W of WALLS) {
+    const glass = W.kind === 'glass', ax = W.axis === 'x';
+    const P = (s, e, y0, y1, mat = glass ? M.glass : M.wall, th = W.t) => {
+      if (e - s < .01 || y1 - y0 < .01) return;
+      const len = e - s, h = y1 - y0, mid = (s + e) / 2;
+      const m = mesh(new THREE.BoxGeometry(ax ? len : th, h, ax ? th : len), mat, ax ? mid : W.c, (y0 + y1) / 2, ax ? W.c : mid, G, mat !== M.glass);
+      return m;
+    };
+    const solid = (s, e) => {
+      if (glass) {
+        P(s, e, .06, H - .05); P(s, e, 0, .06, M.alu, W.t + .02); P(s, e, H - .05, H, M.alu, W.t + .02);
+        for (let q = s; q <= e + .001; q += Math.max(.5, (e - s) / Math.ceil((e - s) / 1.1))) P(q - .02, q + .02, 0, H, M.alu, W.t + .02);
+      } else {
+        P(s, e, 0, H);
+        P(s, e, H, H + .012, M.cap, W.t + .002);
+        P(s, e, 0, .08, M.base, W.t + .02);
+      }
+    };
+    let cur = W.a0;
+    const ops = [...W.ops].sort((a, b) => a[0] - b[0]);
+    for (const [s, e, b, top, type, dir] of ops) {
+      solid(cur, s);
+      if (type === 'win') {
+        if (b < H) {
+          P(s, e, 0, b); P(s, e, b - .03, b + .01, M.white, W.t + .08); P(s, e, 0, .08, M.base, W.t + .02);
+          const gt = Math.min(top, H);
+          P(s, e, b + .01, gt, M.glass, .02);
+          P(s - .03, s + .03, b, gt, M.alu, W.t + .02); P(e - .03, e + .03, b, gt, M.alu, W.t + .02); P((s + e) / 2 - .02, (s + e) / 2 + .02, b, gt, M.alu, .06);
+          if (top < H) { P(s, e, top - .02, top + .02, M.alu, W.t + .02); P(s, e, top, H); P(s, e, H, H + .012, M.cap, W.t + .002); }
+          else P(s, e, b, b + .012, M.cap, W.t + .002);
+        } else { P(s, e, 0, H); P(s, e, H, H + .012, M.cap, W.t + .002); }
+      } else {
+        const ht = Math.min(top, H);
+        if (top < H) { if (glass) { P(s, e, top, H - .05); P(s, e, H - .05, H, M.alu, W.t + .02); } else { P(s, e, top, H); P(s, e, H, H + .012, M.cap, W.t + .002); } }
+        P(s - .05, s, 0, ht, glass ? M.alu : M.white, W.t + .03); P(e, e + .05, 0, ht, glass ? M.alu : M.white, W.t + .03);
+        if (top < H) P(s - .05, e + .05, top, top + .06, glass ? M.alu : M.white, W.t + .03);
+        if (H > 2) {
+          const isExit = type === 'exit', len = e - s - .04;
+          const pivot = new THREE.Group(); pivot.position.set(ax ? s + .02 : W.c, 0, ax ? W.c : s + .02);
+          const leafMat = glass ? M.glass : isExit ? M.darkMetal : M.wood;
+          const leaf = mesh(RB(ax ? len : .04, 2.03, ax ? .04 : len, .01), leafMat, ax ? len / 2 : 0, 1.015, ax ? 0 : len / 2, pivot);
+          const handle = mesh(RB(ax ? .12 : .03, .025, ax ? .03 : .12, .008), M.alu, ax ? len - .1 : (dir > 0 ? .04 : -.04), 1.0, ax ? (dir > 0 ? .04 : -.04) : len - .1, pivot);
+          const open = ax ? -dir * 1.7 : dir * 1.7;
+          pivot.rotation.y = isExit ? 0 : open;
+          doorsGroup.add(pivot); doorLeaves.push({ pivot, open, isExit, cur: pivot.rotation.y });
+        }
+      }
+      cur = e;
+    }
+    solid(cur, W.a1);
+  }
+  wallsMerged = mergeGroup(G); scene.add(wallsMerged);
+  for (const s of exitSigns) s.position.y = H > 2 ? s.userData.yFull : H + .25;
+}
+
+// ================= Furniture =================
+function chair(parent, x, z, rot, mat = M.fabric, opts = {}) {
+  const c = new THREE.Group(); c.position.set(x, 0, z); c.rotation.y = rot; parent.add(c);
+  for (let i = 0; i < 5; i++) {
+    const a = i / 5 * TAU;
+    const leg = rb(.045, .035, .3, M.darkMetal, Math.sin(a) * .15, .07, Math.cos(a) * .15, .012, c); leg.rotation.y = a;
+    mesh(CYL(.026, .026, .03, 8), M.black, Math.sin(a) * .29, .03, Math.cos(a) * .29, c).rotation.z = PI / 2;
+  }
+  cyl(.026, .026, .3, M.metal, 0, .23, 0, c, 10);
+  rb(.48, .075, .46, mat, 0, .41, 0, .03, c);
+  const back = rb(.46, opts.tall ? .7 : .52, .065, mat, 0, opts.tall ? .9 : .79, -.235, .03, c); back.rotation.x = -.12;
+  rb(.05, .3, .04, M.darkMetal, 0, .54, -.245, .012, c);
+  for (const s of [-1, 1]) { rb(.03, .18, .03, M.darkMetal, s * .26, .53, -.04, .01, c); rb(.06, .03, .25, M.black, s * .26, .63, -.02, .012, c); }
+  return c;
+}
+function workstation(x, zF, rot, o = {}) {
+  const { w = 1.4, d = .7, top = M.wood, scr = 0, cmat = M.fabric, pc = true, tall = false } = o;
+  const g = new THREE.Group(); g.position.set(x, 0, zF); g.rotation.y = rot; S.add(g);
+  rb(w, .03, d, top, 0, .735, d / 2, .01, g);
+  for (const s of [-1, 1]) rb(.045, .72, d - .08, M.grey, s * (w / 2 - .06), .36, d / 2, .012, g);
+  rb(w - .16, .32, .018, M.grey, 0, .52, d - .05, .006, g);
+  rb(.22, .014, .16, M.black, 0, .757, d - .2, .006, g);
+  rb(.035, .26, .03, M.darkMetal, 0, .88, d - .16, .008, g);
+  rb(.6, .36, .032, M.black, 0, 1.06, d - .19, .012, g);
+  const sc = mesh(new THREE.PlaneGeometry(.565, .325), M.screens[scr % 3], 0, 1.06, d - .19 - .0175, g, false); sc.rotation.y = PI;
+  rb(.42, .018, .14, M.plastic, 0, .759, .2, .006, g);
+  rb(.06, .022, .1, M.plastic, .3, .76, .21, .01, g);
+  const mugMat = [M.red, M.white, M.fabricTeal][Math.floor(rnd() * 3)];
+  cyl(.038, .034, .1, mugMat, -w / 2 + .18, .8, .26, g, 12);
+  const pap = rb(.21, .006, .29, M.paper, -.4, .754, .45, .002, g); pap.rotation.y = (rnd() - .5) * .5;
+  if (pc) { rb(.2, .43, .44, M.black, w / 2 - .3, .225, .4, .012, g); mesh(new THREE.SphereGeometry(.007, 6, 4), M.led, w / 2 - .25, .4, .4 - .222, g, false); }
+  chair(g, 0, -.46, 0, cmat, { tall });
+  return g;
+}
+function plant(x, z, s = 1, potMat = M.pot) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(s); S.add(g);
+  cyl(.17, .13, .36, potMat, 0, .18, 0, g, 14); cyl(.155, .155, .02, M.soil, 0, .35, 0, g, 14);
+  cyl(.018, .022, .35, M.walnut, 0, .5, 0, g, 6);
+  const ico = (r, x, y, z, m) => mesh(new THREE.IcosahedronGeometry(r, 0), m, x, y, z, g);
+  ico(.3, 0, .82, 0, M.leaf1); ico(.22, .16, .64, .08, M.leaf2); ico(.2, -.14, .68, -.1, M.leaf2); ico(.17, .02, 1.08, .05, M.leaf1);
+}
+function extinguisher(x, z) {
+  cyl(.075, .075, .44, M.red, x, .27, z, S, 14); cyl(.03, .04, .07, M.black, x, .52, z, S, 10);
+  rb(.12, .02, .03, M.black, x + .04, .56, z, .006);
+}
+function sofa(x, z, rot, mat) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; S.add(g);
+  rb(1.4, .3, .75, mat, 0, .25, 0, .05, g); rb(1.25, .14, .6, mat, 0, .45, .05, .05, g);
+  rb(1.4, .45, .18, mat, 0, .58, -.3, .06, g);
+  for (const s of [-1, 1]) rb(.17, .55, .75, mat, s * .7, .32, 0, .06, g);
+  for (const s of [-1, 1]) for (const t of [-1, 1]) cyl(.025, .02, .1, M.black, s * .62, .05, t * .3, g, 8);
+}
+
+// ---------- Openspace ----------
+const SEATS = []; // where mannequins sit
+function addWS(x, zF, rot, o, name) {
+  const g = workstation(x, zF, rot, o);
+  g.updateMatrixWorld(true);
+  const p = new V3(0, 0, -.42).applyMatrix4(g.matrixWorld);
+  SEATS.push({ x: p.x, z: p.z, rot, name, ws: g });
+  return g;
+}
+const WS = [];
+let k = 0;
+for (const bx of [1.8, 3.2, 5.8, 7.2]) WS.push(addWS(bx, 2.0, 0, { scr: k++, cmat: k % 2 ? M.fabric : M.fabricTeal }, ''));
+for (const bx of [1.8, 3.2, 5.8, 7.2]) WS.push(addWS(bx, 3.4, PI, { scr: k++, cmat: k % 2 ? M.fabric : M.fabricTeal }, ''));
+for (const cx of [2.5, 6.5]) rb(2.84, .46, .035, M.felt, cx, .985, 2.7, .012);
+// power strips + cables (hazard #1 is block A)
+const strips = [[2.5, 2.7, M.hazStrip, M.hazCable], [6.5, 2.7, M.plastic, M.rubber]];
+for (const [sx, sz, smat] of strips) {
+  rb(.42, .045, .075, smat, sx, .025, sz, .012);
+  for (let i = 0; i < 5; i++) mesh(new THREE.BoxGeometry(.035, .012, .035), M.black, sx - .16 + i * .08, .052, sz, S, false);
+}
+S.updateMatrixWorld(true);
+WS.forEach((g, i) => {
+  const blockA = i % 4 < 2, [sx, sz, , cmat] = strips[blockA ? 0 : 1];
+  const ends = [new V3(.45, .25, .62), new V3(0, .95, .62)];
+  ends.forEach((lp, j) => {
+    const a = lp.clone().applyMatrix4(g.matrixWorld), end = new V3(sx - .12 + j * .1 + (i % 2) * .04, .03, sz);
+    const pts = [a, new V3(a.x, .06, a.z), new V3((a.x + end.x) / 2, .015, (a.z + end.z) / 2 + (rnd() - .5) * .2), end];
+    if (j === 1) pts.splice(1, 0, new V3(a.x, .74, a.z + (a.z < sz ? .06 : -.06)));
+    mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 18, .0065, 5), cmat, 0, 0, 0, S, false);
+  });
+});
+// printer (hazard #2), water cooler, plants
+rb(.55, .95, .6, M.hazPrinter, 8.45, .475, 5.9, .03); rb(.46, .05, .42, M.darkMetal, 8.45, .975, 5.88, .015); rb(.32, .02, .22, M.paper, 8.45, .55, 5.58, .004);
+rb(.32, 1.0, .32, M.plastic, 8.68, .5, 3.6, .03); cyl(.13, .13, .42, M.glassBlue, 8.68, 1.22, 3.6, S, 16);
+plant(.45, .45); plant(8.55, .45, 1.1, M.terracotta); plant(.5, 6.05, .9); extinguisher(1.15, .3);
+
+// ---------- Meeting room ----------
+{
+  const shape = new THREE.Shape(); const w = 2.6, d = 1.1, r = .25;
+  shape.moveTo(-w / 2 + r, -d / 2); shape.lineTo(w / 2 - r, -d / 2); shape.quadraticCurveTo(w / 2, -d / 2, w / 2, -d / 2 + r);
+  shape.lineTo(w / 2, d / 2 - r); shape.quadraticCurveTo(w / 2, d / 2, w / 2 - r, d / 2); shape.lineTo(-w / 2 + r, d / 2);
+  shape.quadraticCurveTo(-w / 2, d / 2, -w / 2, d / 2 - r); shape.lineTo(-w / 2, -d / 2 + r); shape.quadraticCurveTo(-w / 2, -d / 2, -w / 2 + r, -d / 2);
+  const tg = new THREE.ExtrudeGeometry(shape, { depth: .04, bevelEnabled: true, bevelSize: .01, bevelThickness: .01, bevelSegments: 2, curveSegments: 6 });
+  const top = mesh(tg, M.walnut, 11.6, .74, 2.25); top.rotation.x = -PI / 2;
+  for (const s of [-1, 1]) rb(.12, .7, .6, M.darkMetal, 11.6 + s * .8, .37, 2.25, .02);
+  for (const x of [10.7, 11.6, 12.5]) { chair(S, x, 1.45, 0, M.fabricBlue); chair(S, x, 3.05, PI, M.fabricBlue); }
+  rb(.06, .78, 1.36, M.black, 13.87, 1.45, 2.25, .015);
+  const tv = mesh(new THREE.PlaneGeometry(1.3, .72), M.screens[1], 13.835, 1.45, 2.25, S, false); tv.rotation.y = -PI / 2;
+  plant(13.55, .5, 1.1, M.terracotta);
+  rb(.7, .9, .4, M.white, 13.55, .45, 4.1, .02);
+}
+// ---------- Director ----------
+addWS(12.1, 6.55, PI, { w: 1.6, d: .8, top: M.walnut, scr: 1, cmat: M.leather, tall: true }, 'Директор');
+{
+  const bx = 10.6, bz = 4.76;
+  for (const s of [-1, 1]) rb(.03, 2.0, .35, M.walnut, bx + s * .8, 1.0, bz, .006);
+  for (const y of [.02, .42, .82, 1.22, 1.62, 1.99]) rb(1.6, .025, .35, M.walnut, bx, y, bz, .006);
+  rb(1.6, 2.0, .012, M.walnut, bx, 1.0, bz - .17, .004);
+  const books = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std({ roughness: .8 }), 70);
+  books.castShadow = books.receiveShadow = true;
+  const pal = [0x8b3a3a, 0x2f4f6f, 0xd9c7a1, 0x4f6b3a, 0x6b4f8b, 0xc98b2f, 0x2d2d2d, 0xe8e2d4];
+  const dm = new THREE.Object3D(); let n = 0;
+  for (const sy of [.0325, .4325, .8325, 1.2325, 1.6325]) {
+    let x = bx - .76;
+    while (x < bx + .7 && n < 70) {
+      const th = .025 + rnd() * .03, hh = .2 + rnd() * .12, dd = .2 + rnd() * .06;
+      if (rnd() < .12) { x += .08; continue; }
+      dm.position.set(x + th / 2, sy + hh / 2, bz + .02); dm.scale.set(th, hh, dd); dm.rotation.z = rnd() < .08 ? .15 : 0; dm.updateMatrix();
+      books.setMatrixAt(n, dm.matrix); books.setColorAt(n, new THREE.Color(pal[rnd() * pal.length | 0])); n++; x += th + .004;
+    }
+  }
+  books.count = n; scene.add(books);
+  plant(13.55, 7.1, 1.15);
+  sofa(13.45, 5.9, -PI / 2, M.leather);
+}
+// ---------- Server room ----------
+const RACK_E = (() => {
+  const leds = []; const draw = (g, w, h, em) => {
+    g.fillStyle = em ? '#000' : '#16181b'; g.fillRect(0, 0, w, h);
+    let y = 10; let i = 0;
+    while (y < h - 18) {
+      const u = rnd() < .3 ? 24 : 12; if (!em) { g.fillStyle = i % 2 ? '#2b2f34' : '#34393f'; g.fillRect(8, y, w - 16, u - 2); g.fillStyle = 'rgba(0,0,0,.4)'; for (let v = 40; v < w - 20; v += 6) g.fillRect(v, y + 3, 3, u - 8); }
+      const cols = ['#22c55e', '#38bdf8', '#22c55e', '#f59e0b'];
+      for (let l = 0; l < 3; l++) { if (!em) leds.push(0); g.fillStyle = cols[(i + l) % 4]; g.fillRect(14 + l * 6, y + 4, 3, 3); }
+      y += u; i++;
+    }
+  };
+  seed = 99; const map = ctex(128, 420, (g, w, h) => draw(g, w, h, false));
+  seed = 99; const em = ctex(128, 420, (g, w, h) => draw(g, w, h, true));
+  return std({ map, emissive: 0xffffff, emissiveMap: em, emissiveIntensity: 1.2, roughness: .4 });
+})();
+for (const zc of [8.4, 9.05]) {
+  rb(1.0, 2.0, .6, M.black, 13.4, 1.0, zc, .015);
+  const f = mesh(new THREE.PlaneGeometry(.56, 1.92), RACK_E, 12.895, 1.0, zc, S, false); f.rotation.y = -PI / 2;
+  cyl(.03, .03, .32, M.rubber, 13.4, 2.16, zc, S, 8);
+}
+rb(.7, .9, .45, M.hazUPS, 13.5, .45, 9.68, .02);
+rb(.3, .06, 2.4, M.metal, 13.4, 2.32, 8.75, .01);
+rb(.9, .28, .2, M.plastic, 11.5, 2.4, 7.63, .05);
+extinguisher(9.35, 9.75);
+{ for (let i = 0; i < 7; i++) rb(.06, .55, .16, M.white, 12.95 + i * .065, .34, 7.25, .02); rb(.1, .05, .05, M.white, 13.4, .1, 7.38, .01);
+  const cable = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new V3(13.4, .1, 7.38), new V3(13.6, .02, 7.4), new V3(13.85, .02, 7.42), new V3(13.88, .3, 7.42)]), 12, .007, 5); mesh(cable, M.rubber, 0, 0, 0, S, false);
+  rb(.08, .12, .03, M.white, 13.88, .32, 7.43, .01); }
+
+// ---------- Kitchen ----------
+rb(3.0, .86, .58, M.cabinet, 1.65, .43, 9.6, .01);
+for (let i = 0; i < 5; i++) rb(.12, .015, .02, M.alu, .45 + i * .6, .78, 9.305, .006);
+rb(3.1, .04, .62, M.stone, 1.65, .88, 9.6, .01);
+rb(.6, .02, .55, M.blackGlass, .75, .91, 9.62, .006);
+for (const [bx2, bz2] of [[.6, 9.48], [.9, 9.48], [.6, 9.76], [.9, 9.76]]) { cyl(.07, .07, .012, M.darkMetal, bx2, .925, bz2, S, 16); cyl(.03, .03, .02, M.black, bx2, .932, bz2, S, 10); }
+rb(.56, .5, .02, M.blackGlass, .75, .45, 9.305, .006);
+rb(.62, .32, .46, M.metal, .75, 2.05, 9.75, .03);
+cyl(.022, .022, 1.6, M.pipe, 1.15, 1.75, 9.91, S, 10);
+{ const h = cyl(.022, .022, .95, M.pipe, .675, 2.55, 9.91, S, 10); h.rotation.z = PI / 2; }
+rb(.06, .03, .03, M.red, 1.15, 1.12, 9.88, .008);
+rb(.5, .02, .4, M.metal, 2.3, .905, 9.6, .01); cyl(.012, .012, .25, M.metal, 2.3, 1.03, 9.82, S, 8);
+rb(1.9, .7, .34, M.cabinet, 2.15, 1.85, 9.73, .01);
+rb(.66, 1.85, .66, M.metal, 3.55, .925, 9.6, .02); rb(.02, .5, .03, M.darkMetal, 3.3, 1.2, 9.26, .006);
+rb(1.1, .9, .55, M.cabinet, 3.3, .45, 6.85, .01); rb(1.15, .04, .6, M.stone, 3.3, .92, 6.85, .01);
+rb(.5, .3, .38, M.white, 3.5, 1.09, 6.85, .02);
+mesh(new THREE.PlaneGeometry(.3, .2), M.microWin, 3.44, 1.09, 7.042, S, false);
+rb(.24, .36, .32, M.black, 2.95, 1.12, 6.85, .02);
+cyl(.45, .45, .03, M.wood, 1.6, .74, 7.95, S, 24); cyl(.03, .03, .72, M.darkMetal, 1.6, .37, 7.95, S, 8); cyl(.25, .25, .02, M.darkMetal, 1.6, .01, 7.95, S, 16);
+for (const sx of [.95, 2.25]) { cyl(.18, .18, .04, M.fabricTeal, sx, .62, 7.95, S, 16); cyl(.02, .02, .6, M.metal, sx, .31, 7.95, S, 6); cyl(.17, .17, .015, M.metal, sx, .008, 7.95, S, 14); }
+extinguisher(.3, 6.8);
+// ---------- Hall ----------
+addWS(6.4, 8.15, 0, { w: 1.6, d: .5, scr: 2, cmat: M.fabricTeal, pc: false }, 'Администратор');
+rb(2.2, 1.05, .06, M.white, 6.4, .525, 8.74, .02);
+for (const s of [-1, 1]) rb(.06, 1.05, .6, M.white, 6.4 + s * 1.1, .525, 8.45, .02);
+rb(2.32, .04, .26, M.wood, 6.4, 1.07, 8.68, .012);
+{ const lc = textCanvas('TutinGuard', { font: 'bold 34px system-ui', bg: '#0f6e56', pad: 26, r: 0 }), lt = new THREE.CanvasTexture(lc); lt.colorSpace = THREE.SRGBColorSpace;
+  mesh(new THREE.PlaneGeometry(Math.min(1.7, .3 * lc.width / lc.height), .3), std({ map: lt, roughness: .5 }), 6.4, .7, 8.773, S, false); }
+sofa(7.75, 9.5, PI, M.fabricBlue);
+plant(4.45, 6.95, 1.05, M.terracotta); plant(8.65, 9.6, .9);
+extinguisher(5.35, 9.75);
+// electrical panel (hazard #6)
+rb(.15, .75, .55, M.hazPanel, 8.86, 1.45, 7.05, .015);
+rb(.02, .1, .1, M.black, 8.78, 1.6, 7.05, .004);
+
+// merge everything static
+const staticMerged = mergeGroup(S); scene.add(staticMerged);
+
+// ================= Mannequins =================
+const MQ = (() => {
+  const body = std({ color: 0xf1efea, roughness: .55 });
+  const joint = std({ color: 0xb3b7bb, roughness: .35, metalness: .15 });
+  const prof = [[0, .02], [.12, .03], [.135, .1], [.122, .19], [.142, .3], [.168, .41], [.15, .48], [.075, .535], [0, .545]].map(([a, b]) => new THREE.Vector2(a, b));
+  return {
+    body, joint, g: {
+      pelvis: new THREE.SphereGeometry(.15, 16, 10), torso: new THREE.LatheGeometry(prof, 18),
+      seam: new THREE.TorusGeometry(.13, .008, 6, 24), neck: new THREE.CylinderGeometry(.042, .048, .1, 10),
+      head: new THREE.SphereGeometry(.105, 18, 14), jS: new THREE.SphereGeometry(.052, 12, 8), jM: new THREE.SphereGeometry(.046, 12, 8),
+      thigh: new THREE.CapsuleGeometry(.066, .3, 4, 12), shin: new THREE.CapsuleGeometry(.05, .32, 4, 10),
+      ua: new THREE.CapsuleGeometry(.044, .2, 4, 10), fa: new THREE.CapsuleGeometry(.037, .19, 4, 10),
+      hand: new THREE.CapsuleGeometry(.03, .06, 3, 8), foot: new RoundedBoxGeometry(.09, .065, .24, 2, .025),
+      ring: new THREE.TorusGeometry(.13, .016, 6, 28),
+    }
+  };
+})();
+const POSE = {
+  sit: { hy: .53, spine: .12, hip: -1.57, knee: 1.57, sh: -.75, el: -.85 },
+  stand: { hy: .945, spine: 0, hip: 0, knee: 0, sh: .02, el: -.12 },
+  lie: { hy: .945, spine: 0, hip: 0, knee: .2, sh: .2, el: -.3 },
+};
+function makePerson(seat, label) {
+  const { body, joint, g } = MQ;
+  const m = (geo, mat, p, x = 0, y = 0, z = 0) => mesh(geo, mat, x, y, z, p);
+  const root = new THREE.Group(); root.position.set(seat.x, 0, seat.z); root.rotation.y = seat.rot; D.add(root);
+  const hips = new THREE.Group(); root.add(hips);
+  m(g.pelvis, body, hips).scale.set(1, .62, .74);
+  const spine = new THREE.Group(); spine.position.y = .02; hips.add(spine);
+  m(g.torso, body, spine).scale.set(1, 1, .62);
+  const seam = m(g.seam, joint, spine, 0, .055, 0); seam.rotation.x = PI / 2; seam.scale.set(1, .64, 1);
+  m(g.neck, body, spine, 0, .58, 0);
+  const head = m(g.head, body, spine, 0, .72, .005); head.scale.set(.88, 1.12, .98);
+  const J = { hips, spine };
+  for (const s of [-1, 1]) {
+    const k = s < 0 ? 'L' : 'R';
+    const sh = new THREE.Group(); sh.position.set(s * .2, .46, 0); sh.rotation.z = s * .07; spine.add(sh); m(g.jS, joint, sh);
+    m(g.ua, body, sh, 0, -.145, 0);
+    const el = new THREE.Group(); el.position.y = -.29; sh.add(el); m(g.jM, joint, el).scale.setScalar(.85);
+    m(g.fa, body, el, 0, -.13, 0);
+    m(g.hand, body, el, 0, -.32, 0).scale.set(1, 1, .6);
+    const hp = new THREE.Group(); hp.position.set(s * .092, -.04, 0); hips.add(hp);
+    m(g.thigh, body, hp, 0, -.2, 0);
+    const kn = new THREE.Group(); kn.position.y = -.41; hp.add(kn); m(g.jM, joint, kn);
+    m(g.shin, body, kn, 0, -.21, 0);
+    m(g.foot, body, kn, 0, -.465, .06);
+    Object.assign(J, { ['sh' + k]: sh, ['el' + k]: el, ['hip' + k]: hp, ['kn' + k]: kn });
+  }
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: .9 });
+  const ring = new THREE.Mesh(g.ring, ringMat); ring.rotation.x = PI / 2; root.add(ring);
+  const P = { root, J, ring, seat: { ...seat }, label, state: 'sit', t: 0, phase: 0, wp: 0, route: null, fedCO: 0, fedHeat: 0, alertAt: null };
+  root.traverse(o => { if (o.isMesh) o.userData.pick = { kind: 'person', ref: P }; });
+  applyPose(P, POSE.sit);
+  return P;
+}
+function applyPose(P, a, b = a, t = 0, walk = null) {
+  const L = (k) => a[k] + (b[k] - a[k]) * t, J = P.J;
+  J.hips.position.y = L('hy'); J.spine.rotation.x = L('spine');
+  let hl = L('hip'), hr = hl, kl = L('knee'), kr = kl, sl = L('sh'), sr = sl, el = L('el');
+  if (walk !== null) { const s = Math.sin(walk); hl = s * .45; hr = -s * .45; kl = Math.max(0, -s) * .7 + .05; kr = Math.max(0, s) * .7 + .05; sl = -s * .35; sr = s * .35; }
+  J.hipL.rotation.x = hl; J.hipR.rotation.x = hr; J.knL.rotation.x = kl; J.knR.rotation.x = kr;
+  J.shL.rotation.x = sl; J.shR.rotation.x = sr; J.elL.rotation.x = el; J.elR.rotation.x = el;
+  P.ring.position.y = J.hips.position.y + .98;
+}
+const NAMES = ['Айгерим', 'Данияр', 'Мадина', 'Ерлан', 'Алия', 'Тимур', 'Жанна', 'Арман', 'Директор', 'Администратор'];
+const PEOPLE = SEATS.map((s, i) => makePerson(s, s.name || NAMES[i]));
+
+// evacuation routes (world waypoints, last point is outside)
+const EXIT_E = [[2.0, .6], [2.0, -1.4]], EXIT_M = [[4.7, 9.0], [6.25, 9.4], [6.25, 11.4]];
+const toHall = [[6.5, 5.6], [6.5, 7.0], [4.7, 7.3]];
+function routesFor(P, i) {
+  const { x, z } = P.seat; const r = [];
+  if (i < 4) { r.push([[x, .95], [1.9, .95], ...EXIT_E]); r.push([[x, .95], [8.4, .95], [8.4, 4.6], ...toHall, ...EXIT_M]); }
+  else if (i < 8) { r.push([[x, 4.6], [.6, 4.6], [.6, .95], [1.9, .95], ...EXIT_E]); r.push([[x, 4.6], ...toHall, ...EXIT_M]); }
+  else if (i === 8) { r.push([[11.4, 6.95], [9.6, 5.65], [8.4, 5.65], [6.5, 5.8], [6.5, 7.0], [4.7, 7.3], ...EXIT_M]); r.push([[11.4, 6.95], [9.6, 5.65], [8.4, 5.65], [8.4, .95], [1.9, .95], ...EXIT_E]); }
+  else { r.push([[4.7, 7.6], ...EXIT_M]); r.push([[6.5, 7.0], [6.5, 5.6], [.6, 4.6], [.6, .95], [1.9, .95], ...EXIT_E]); }
+  return r;
+}
+
+// ================= Sensors =================
+const STATE_COL = { normal: 0x22c55e, pre_alarm: 0xfacc15, alarm: 0xef4444, offline: 0x6b7280 };
+const STATE_RU = { normal: 'норма', pre_alarm: 'внимание', alarm: 'тревога', offline: 'нет связи' };
+const TYPE_RU = { multi: 'Мультисенсор (дым + t° + CO)', smoke: 'Дымовой', heat: 'Тепловой', gas_lel: 'Газ CH₄', gas_co: 'Угарный газ CO', manual: 'Ручной извещатель', panel: 'Пульт сигнализации' };
+const MODEL = { multi: 'Ajax FireProtect 2 (sim)', smoke: 'ДИП-34А (sim)', heat: 'С2000-ИП (sim)', gas_lel: 'Газоанализатор CH₄ (sim)', gas_co: 'Датчик CO (sim)', manual: 'ИПР 513-3АМ (sim)', panel: 'С2000М + С2000-КДЛ (sim)' };
+const CEIL = 2.86;
+const SENSOR_DEF = [
+  ['SMK-OS-01', 'smoke', 4.6, CEIL, .9], ['SMK-OS-02', 'smoke', 7.75, CEIL, .9], ['SMK-OS-03', 'smoke', 1.75, CEIL, 5.4], ['SMK-OS-04', 'smoke', 6.25, CEIL, 5.4],
+  ['SMK-MT-01', 'smoke', 10.0, CEIL, 3.75], ['SMK-MT-02', 'smoke', 13.25, CEIL, 3.75],
+  ['SMK-DR-01', 'smoke', 10.0, CEIL, 6.6], ['SMK-DR-02', 'smoke', 13.3, CEIL, 5.0],
+  ['SMK-SR-01', 'smoke', 10.1, CEIL, 9.0], ['HT-SR-01', 'heat', 11.6, CEIL, 9.3],
+  ['SMK-HL-01', 'smoke', 4.9, CEIL, 7.9], ['SMK-HL-02', 'smoke', 8.25, CEIL, 9.25],
+  ['HT-KT-01', 'heat', 2.25, CEIL, 7.75], ['HT-KT-02', 'heat', 2.9, CEIL, 9.1],
+  ['GL-KT-01', 'gas_lel', .75, 2.55, 9.885, PI], ['CO-KT-01', 'gas_co', .115, 1.55, 7.0, PI / 2],
+  ['MCP-OS-01', 'manual', .115, 1.5, 2.3, PI / 2], ['MCP-HL-01', 'manual', 7.1, 1.5, 9.885, PI],
+  ['PNL-01', 'panel', 4.075, 1.5, 9.3, PI / 2],
+  ['MLT-OS-01', 'multi', 2.5, CEIL, 3.75], ['MLT-DR-01', 'multi', 11.6, CEIL, 6.0],
+];
+const haloMatFor = (c) => new THREE.SpriteMaterial({ map: RADIAL, color: c, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: .85 });
+const SENSORS = [];
+const panelCanvas = document.createElement('canvas'); panelCanvas.width = 128; panelCanvas.height = 64;
+const panelTex = new THREE.CanvasTexture(panelCanvas); panelTex.colorSpace = THREE.SRGBColorSpace;
+function drawPanel(txt, col) { const g = panelCanvas.getContext('2d'); g.fillStyle = '#0b1a12'; g.fillRect(0, 0, 128, 64); g.fillStyle = col; g.font = 'bold 22px system-ui'; g.textAlign = 'center'; g.fillText(txt, 64, 40); panelTex.needsUpdate = true; }
+drawPanel('НОРМА', '#4ade80');
+for (const [id, type, x, y, z, rot] of SENSOR_DEF) {
+  const g = new THREE.Group(); g.position.set(x, y, z); if (rot !== undefined) g.rotation.y = rot; D.add(g);
+  const ledMat = new THREE.MeshBasicMaterial({ color: STATE_COL.normal });
+  if (type === 'multi') { mesh(CYL(.07, .075, .035, 20), M.white, 0, .02, 0, g); mesh(CYL(.058, .062, .022, 20), M.fabricTeal, 0, -.006, 0, g); mesh(new THREE.SphereGeometry(.009, 6, 4), ledMat, .05, -.01, 0, g, false); }
+  else if (type === 'smoke') { mesh(CYL(.065, .07, .03, 20), M.white, 0, .02, 0, g); mesh(CYL(.05, .058, .028, 20), M.plastic, 0, -.008, 0, g); mesh(new THREE.SphereGeometry(.009, 6, 4), ledMat, .045, -.01, 0, g, false); }
+  else if (type === 'heat') { mesh(CYL(.05, .055, .035, 18), M.white, 0, .018, 0, g); mesh(CYL(.008, .008, .03, 6), M.black, 0, -.012, 0, g); mesh(new THREE.SphereGeometry(.009, 6, 4), ledMat, .04, 0, 0, g, false); }
+  else if (type === 'gas_lel' || type === 'gas_co') { mesh(RB(.1, .14, .045, .012), M.white, 0, 0, .022, g); mesh(RB(.06, .04, .01, .004), M.darkMetal, 0, -.03, .046, g); mesh(new THREE.SphereGeometry(.009, 6, 4), ledMat, 0, .04, .046, g, false); }
+  else if (type === 'manual') { mesh(RB(.1, .1, .04, .008), M.red, 0, 0, .02, g); mesh(RB(.055, .055, .008, .003), M.white, 0, 0, .042, g); mesh(new THREE.SphereGeometry(.008, 6, 4), ledMat, .032, .032, .042, g, false); }
+  else { mesh(RB(.32, .42, .09, .012), M.grey, 0, 0, .045, g); const d = mesh(new THREE.PlaneGeometry(.2, .1), new THREE.MeshBasicMaterial({ map: panelTex }), 0, .08, .092, g, false); mesh(new THREE.SphereGeometry(.01, 6, 4), ledMat, .12, -.15, .092, g, false); }
+  const halo = new THREE.Sprite(haloMatFor(STATE_COL.normal)); halo.scale.setScalar(.28); halo.position.set(0, type === 'smoke' || type === 'heat' ? -.03 : 0, type === 'smoke' || type === 'heat' ? 0 : .06); g.add(halo);
+  const s = { id, type, x, y, z, zone: zoneAt(x, z)?.id, g, ledMat, halo, state: 'normal', value: 0, prevT: 22, ror: 0, temp: 22, coV: 0, offline: false, pressed: false, model: MODEL[type] };
+  g.traverse(o => { o.userData.pick = { kind: 'sensor', ref: s }; });
+  SENSORS.push(s);
+}
+// sirens & exit signs
+const sirenMat = std({ color: 0xb91c1c, emissive: 0xff2020, emissiveIntensity: 0, roughness: .4 });
+const SIRENS = [[4.5, 2.5, .115, 0], [11.5, 2.45, 4.435, PI], [11.5, 2.45, 7.435, PI], [11.5, 2.45, 9.885, PI], [2.5, 2.45, 6.565, 0], [8.2, 2.45, 9.885, PI]];
+const sirenLights = [];
+for (const [x, y, z, r] of SIRENS) {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = r; D.add(g);
+  mesh(RB(.16, .2, .06, .02), M.white, 0, 0, .03, g); mesh(CYL(.045, .045, .05, 14), sirenMat, 0, .02, .07, g).rotation.x = PI / 2;
+  const h = new THREE.Sprite(haloMatFor(0xff3030)); h.scale.setScalar(.01); h.position.set(0, .02, .11); g.add(h); sirenLights.push(h);
+}
+{
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96; const g = c.getContext('2d');
+  g.fillStyle = '#16a34a'; g.fillRect(0, 0, 256, 96); g.fillStyle = '#fff'; g.font = 'bold 46px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ВЫХОД →', 128, 50);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .8 });
+  for (const [x, z, r] of [[2.0, .115, 0], [6.25, 9.885, PI]]) {
+    const g2 = new THREE.Group(); g2.position.set(x, 2.42, z); g2.rotation.y = r; g2.userData.yFull = 2.42; D.add(g2);
+    mesh(RB(.4, .16, .04, .01), M.white, 0, 0, .02, g2); mesh(new THREE.PlaneGeometry(.36, .13), mat, 0, 0, .041, g2, false);
+    exitSigns.push(g2);
+  }
+}
+buildWalls();
+
+// ================= Labels & hazard badges =================
+for (const z of ZONES) {
+  const c = textCanvas(z.name, { font: '600 26px system-ui' }); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+  sp.scale.set(c.width / c.height * .42, .42, 1); sp.position.set((z.x0 + z.x1) / 2, 3.35, (z.z0 + z.z1) / 2); sp.renderOrder = 10; D.add(sp);
+}
+const HAZ = [
+  { n: 1, name: 'Удлинитель под столами', sub: 'тление проводов → горение', zone: 'os', pos: [2.5, .1, 2.7], glow: [M.hazCable, M.hazStrip],
+    stages: [{ dur: 75, smoke: .0075, heat: .03, co: 6, label: 'тление' }, { smoke: .013, heat: .3, co: 25, fire: 1, label: 'горение' }] },
+  { n: 2, name: 'МФУ в опенспейсе', sub: 'тлеет бумага → горение', zone: 'os', pos: [8.45, 1.05, 5.9], glow: [M.hazPrinter],
+    stages: [{ dur: 90, smoke: .006, heat: .02, co: 5, label: 'тление' }, { smoke: .011, heat: .25, co: 22, fire: .8, label: 'горение' }] },
+  { n: 3, name: 'Серверная стойка / ИБП', sub: 'перегрев → горят аккумуляторы', zone: 'srv', pos: [13.0, 1.0, 9.3], glow: [M.hazUPS],
+    stages: [{ dur: 70, smoke: .002, heat: .22, co: 2, label: 'перегрев' }, { smoke: .012, heat: .4, co: 22, fire: .9, label: 'горение' }] },
+  { n: 4, name: 'Газовая плита на кухне', sub: 'утечка метана', zone: 'kit', pos: [.75, 1.0, 9.62], gas: true,
+    stages: [{ lel: .12, co: 0, label: 'утечка' }] },
+  { n: 5, name: 'Микроволновка', sub: 'пригорела еда (ложная тревога?)', zone: 'kit', pos: [3.5, 1.15, 6.85], glow: [M.microWin],
+    stages: [{ dur: 120, smoke: .0013, heat: .02, co: .3, label: 'дым' }, { smoke: 0, heat: 0, co: 0, label: 'погасло', end: 1 }] },
+  { n: 6, name: 'Электрощит в холле', sub: 'короткое замыкание → горение', zone: 'hall', pos: [8.82, 1.45, 7.05], glow: [M.hazPanel],
+    stages: [{ dur: 60, smoke: .004, heat: .05, co: 5, label: 'искрение' }, { smoke: .012, heat: .3, co: 24, fire: .8, label: 'горение' }] },
+  { n: 7, name: 'Розетка обогревателя (часы)', sub: 'медленный перегрев ~2,5 ч → тление → огонь', zone: 'dir', pos: [13.15, .35, 7.2], slow: true,
+    stages: [{ dur: 9000, ramp: 1, smoke: 5.5e-5, heat: .012, co: .06, label: 'скрытый перегрев' }, { dur: 120, smoke: .006, heat: .05, co: 6, label: 'тление' }, { smoke: .012, heat: .3, co: 24, fire: .7, label: 'горение' }] },
+  { n: 8, name: 'Аккумуляторы ИБП (часы)', sub: 'деградация ~2 ч → тепловой разгон → огонь', zone: 'srv', pos: [13.5, 1.0, 9.68], glow: [M.hazUPS], slow: true,
+    stages: [{ dur: 7200, ramp: 1, smoke: 2e-5, heat: .012, co: .01, label: 'деградация батарей' }, { dur: 60, smoke: .003, heat: .25, co: 2, label: 'тепловой разгон' }, { smoke: .012, heat: .4, co: 22, fire: .9, label: 'горение' }] },
+];
+function badgeTex(n) { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#c62828'; g.beginPath(); g.arc(32, 32, 28, 0, TAU); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke(); g.fillStyle = '#fff'; g.font = 'bold 32px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n, 32, 34); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+for (const h of HAZ) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: badgeTex(h.n), depthTest: false, transparent: true }));
+  sp.scale.setScalar(.38); sp.position.set(h.pos[0], h.pos[1] + .55, h.pos[2]); sp.renderOrder = 11; D.add(sp);
+  sp.userData.pick = { kind: 'hazard', ref: h }; h.badge = sp;
+  h.active = false; h.stage = 0; h.t = 0;
+}
+
+// ================= Effects: smoke / gas layers, plumes, fire =================
+function makePoints(n, color, size) {
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  const mat = new THREE.PointsMaterial({ map: RADIAL, color, size, transparent: true, opacity: 0, depthWrite: false, sizeAttenuation: true });
+  const p = new THREE.Points(geo, mat); p.frustumCulled = false; D.add(p); return p;
+}
+for (const z of ZONES) {
+  const area = (z.x1 - z.x0) * (z.z1 - z.z0), n = Math.round(area * 14);
+  z.smokeP = makePoints(n, 0x8a8f96, 1.5); z.gasP = makePoints(Math.round(n * .6), 0xc8f07a, .9);
+  z.seedPts = Array.from({ length: n }, () => [z.x0 + .2 + rnd() * (z.x1 - z.x0 - .4), rnd(), z.z0 + .2 + rnd() * (z.z1 - z.z0 - .4), rnd() * TAU]);
+}
+const flameMat = new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: .85, blending: THREE.AdditiveBlending, depthWrite: false });
+const flameMat2 = new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false });
+const fireLights = [new THREE.PointLight(0xff7a1a, 0, 7, 1.6), new THREE.PointLight(0xff7a1a, 0, 7, 1.6)];
+fireLights.forEach(l => scene.add(l)); // created upfront so shaders never recompile mid-demo
+for (const h of HAZ) {
+  h.plume = makePoints(90, 0x6f747a, .7); h.plumeSeeds = Array.from({ length: 90 }, () => [rnd(), rnd() * TAU, rnd()]);
+  const fg = new THREE.Group(); fg.position.set(h.pos[0], h.n === 1 ? .02 : h.pos[1] - .2, h.pos[2]); fg.visible = false; D.add(fg);
+  for (let i = 0; i < 5; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(.12 + rnd() * .08, .5 + rnd() * .3, 7), i % 2 ? flameMat : flameMat2); c.position.set((rnd() - .5) * .25, .25, (rnd() - .5) * .25); fg.add(c); }
+  h.fire = fg;
+}
+
+// ================= Simulation =================
+const AMB = 22;
+const ADJ = [['os', 'meet'], ['os', 'dir'], ['os', 'hall'], ['hall', 'kit'], ['hall', 'srv']];
+let simEpoch = Date.now(); const vnow = () => new Date(simEpoch + simT * 1000).toISOString();
+let simT = 0, speed = 5, alertsOn = true, evacuating = false, sirenOn = false, sirenSilenced = false, statusLevel = 0, statusText = 'Норма';
+function resetZones() { for (const z of ZONES) Object.assign(z, { smoke: 0, temp: AMB, co: 0, lel: 0, confirmed: false }); }
+resetZones();
+const logEl = document.getElementById('log');
+const fmtT = (t) => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+function log(msg, cls = 'e-info') { const d = document.createElement('div'); d.className = cls; d.innerHTML = `<span class="t">${fmtT(simT)}</span>${msg}`; logEl.prepend(d); while (logEl.children.length > 60) logEl.lastChild.remove(); }
+const BUS = new EventTarget();
+window.TUTIN = { bus: BUS, sensors: SENSORS, zones: ZONES, people: PEOPLE, hazards: HAZ, trigger: (n) => toggleHazard(HAZ[n - 1]), advance: (sec) => { for (let i = 0; i < sec * 10; i++) simStep(.1); }, view: (cx, cy, cz, tx, ty, tz) => flyTo(new V3(tx, ty, tz), new V3(cx, cy, cz)) };
+function emit(type, payload) { BUS.dispatchEvent(new CustomEvent(type, { detail: { type, schema: '1.0', ts: vnow(), site_id: 'office-01', simulated: true, ...payload } })); }
+
+function sensorRead(s) {
+  const z = ZMAP[s.zone]; if (!z) return 0;
+  let boost = 1;
+  for (const h of HAZ) if (h.active && h.zone === s.zone) { const d = Math.hypot(h.pos[0] - s.x, h.pos[2] - s.z); boost = Math.max(boost, 1 + .7 * Math.exp(-d / 2.5)); }
+  const n = 1 + (rnd() - .5) * .04;
+  switch (s.type) {
+    case 'smoke': case 'multi': return z.smoke * boost * n;
+    case 'heat': return AMB + (z.temp - AMB) * boost * n;
+    case 'gas_lel': return z.lel * boost * n;
+    case 'gas_co': return z.co * boost * n;
+    case 'manual': return s.pressed ? 1 : 0;
+    default: return 0;
+  }
+}
+const UNITS = { multi: 'дБ/м', smoke: 'дБ/м', heat: '°C', gas_lel: '% НКПР', gas_co: 'ppm' };
+function setSensorState(s, st, why) {
+  if (s.state === st) return;
+  const prev = s.state; s.state = st;
+  const c = STATE_COL[st]; s.ledMat.color.setHex(c); s.halo.material.color.setHex(c);
+  s.halo.scale.setScalar(st === 'alarm' ? .55 : st === 'pre_alarm' ? .4 : .28);
+  const zn = ZMAP[s.zone]?.name || '';
+  const ev = st === 'alarm' ? 'alarm' : st === 'pre_alarm' ? 'pre_alarm' : st === 'offline' ? 'fault' : (prev === 'offline' ? 'fault_cleared' : 'restore');
+  const cls = { alarm: 'e-alarm', pre_alarm: 'e-pre', offline: 'e-off', normal: 'e-ok' }[st];
+  log(`${zn}: <b>${s.id}</b> — ${STATE_RU[st]}${why ? ' (' + why + ')' : ''}`, cls);
+  // a device that lost its link cannot report it itself: the server detects silence (heartbeat timeout)
+  if (st !== 'offline' && prev !== 'offline')
+    emit('event', { event_id: 'evt-' + Math.random().toString(16).slice(2, 7), zone_id: s.zone, device_id: s.id, event: ev, category: s.type, prev_state: prev === '_' ? null : prev, state: st, value: valuesOf(s), source: s.type === 'manual' ? 'button' : 'auto' });
+}
+function evalSensor(s, dt) {
+  if (s.type === 'panel') return;
+  if (s.offline) { s.value = 0; return; }
+  const v = sensorRead(s); s.value = v;
+  if (s.type === 'multi') { const z = ZMAP[s.zone], b = v / Math.max(z.smoke, 1e-9) || 1; s.temp = AMB + (z.temp - AMB) * Math.min(b, 1.7); s.coV = z.co * Math.min(b, 1.7); const r = (s.temp - s.prevT) / Math.max(dt, 1e-3) * 60; s.ror = s.ror * .85 + r * .15; s.prevT = s.temp; }
+  if (s.type === 'heat') { const r = (v - s.prevT) / Math.max(dt, 1e-3) * 60; s.ror = s.ror * .85 + r * .15; s.prevT = v; }
+  let st = 'normal', why = '';
+  if (s.type === 'multi') {
+    if (v >= .15 || s.temp >= 57 || (s.ror >= 10 && s.temp > 30) || s.coV >= 300) { st = 'alarm'; why = v >= .15 ? v.toFixed(2) + ' дБ/м' : s.temp >= 57 || s.ror >= 10 ? s.temp.toFixed(0) + ' °C' : s.coV.toFixed(0) + ' ppm CO'; }
+    else if (v >= .05 || s.temp >= 45 || s.coV >= 50) { st = 'pre_alarm'; why = v >= .05 ? v.toFixed(2) + ' дБ/м' : s.temp >= 45 ? s.temp.toFixed(0) + ' °C' : s.coV.toFixed(0) + ' ppm CO'; }
+  }
+  else if (s.type === 'smoke') { if (v >= .15) { st = 'alarm'; why = v.toFixed(2) + ' дБ/м'; } else if (v >= .05) { st = 'pre_alarm'; why = v.toFixed(2) + ' дБ/м'; } }
+  else if (s.type === 'heat') { if (v >= 57 || (s.ror >= 10 && v > 30)) { st = 'alarm'; why = v >= 57 ? v.toFixed(0) + ' °C' : `рост ${s.ror.toFixed(0)} °C/мин`; } else if (v >= 45 || (s.ror >= 5 && v > 28)) { st = 'pre_alarm'; why = v.toFixed(0) + ' °C'; } }
+  else if (s.type === 'gas_lel') { if (v >= 20) { st = 'alarm'; why = v.toFixed(0) + '% НКПР'; } else if (v >= 10) { st = 'pre_alarm'; why = v.toFixed(0) + '% НКПР'; } }
+  else if (s.type === 'gas_co') { s.coHigh = v >= 100 ? (s.coHigh || 0) + dt : 0; if (v >= 300 || s.coHigh >= 60) { st = 'alarm'; why = v.toFixed(0) + ' ppm'; } else if (v >= 50) { st = 'pre_alarm'; why = v.toFixed(0) + ' ppm'; } }
+  else if (s.type === 'manual') { if (v) { st = 'alarm'; why = 'нажата кнопка'; } }
+  if (s.state === 'alarm' && st !== 'alarm') return; // fire panels latch alarms until reset
+  const PRE = { smoke: .05, multi: .05, heat: 45, gas_lel: 10, gas_co: 50 };
+  if (s.state === 'pre_alarm' && st === 'normal' && PRE[s.type] !== undefined && v > PRE[s.type] * .85 && !(s.type === 'heat' && v < 40)) return; // hysteresis
+  setSensorState(s, st, why);
+}
+function toggleHazard(h) {
+  if (h.active) { h.active = false; h.fire.visible = false; log(`Источник ${h.n} остановлен`, 'e-info'); }
+  else { h.active = true; h.stage = 0; h.t = 0; log(`▶ Источник ${h.n}: ${h.name} — ${h.stages[0].label}`, 'e-pre'); }
+  renderHazButtons();
+}
+function startEvac(reason) {
+  if (evacuating) return; evacuating = true;
+  log(`Эвакуация: ${reason}`, 'e-alarm');
+  for (const d of doorLeaves) if (d.isExit) d.target = (d.pivot.position.z < 1 ? 1 : -1) * 1.6;
+  PEOPLE.forEach(P => { if (P.state === 'sit' && P.alertAt === null) P.alertAt = simT + 2 + rnd() * 6; });
+}
+function chooseRoute(P, i) {
+  const rs = routesFor(P, i); let best = null, bs = 1e9;
+  for (const r of rs) {
+    let len = 0, worst = 0, px = P.root.position.x, pz = P.root.position.z;
+    for (const [x, z] of r) { len += Math.hypot(x - px, z - pz); const zz = zoneAt(x, z); if (zz) worst = Math.max(worst, zz.smoke + zz.lel / 40); px = x; pz = z; }
+    for (const h of HAZ) if (h.active && h.stage > 0) for (const [x, z] of r) if (Math.hypot(x - h.pos[0], z - h.pos[2]) < 1.5) worst += 2;
+    const sc = len + worst * 40; if (sc < bs) { bs = sc; best = r; }
+  }
+  const [lx, lz] = best[best.length - 1];
+  return [...best, [lx + (i % 5 - 2) * .75, lz + (lz < 5 ? -1 : 1) * (.7 + Math.floor(i / 5) * .8)]];
+}
+function simStep(dt) {
+  simT += dt;
+  // sources
+  for (const h of HAZ) {
+    if (!h.active) continue;
+    h.t += dt; let st = h.stages[h.stage];
+    if (st.dur && h.t > st.dur && h.stage < h.stages.length - 1) {
+      h.stage++; h.t = 0; st = h.stages[h.stage];
+      log(`Источник ${h.n}: ${st.label}`, st.fire ? 'e-alarm' : 'e-info');
+      if (st.end) { h.active = false; renderHazButtons(); continue; }
+    }
+    const z = ZMAP[h.zone], area = (z.x1 - z.x0) * (z.z1 - z.z0), f = clamp(25 / area, .5, 2);
+    const ramp = st.ramp ? .05 + 2.2 * Math.pow(Math.min(h.t / st.dur, 1), 2) : 1; // slow, accelerating precursor
+    z.smoke += (st.smoke || 0) * f * dt * ramp; z.temp += (st.heat || 0) * f * dt * ramp; z.co += (st.co || 0) * f * dt * ramp; z.lel += (st.lel || 0) * f * dt * ramp;
+  }
+  // exchange through doors + ventilation
+  for (const [a, b] of ADJ) {
+    const A = ZMAP[a], B = ZMAP[b], kk = .004 * dt;
+    for (const q of ['smoke', 'temp', 'co', 'lel']) { const fl = (A[q] - B[q]) * kk; A[q] -= fl; B[q] += fl; }
+  }
+  for (const z of ZONES) {
+    const out = evacuating && (z.id === 'os' || z.id === 'hall') ? .006 : .0015;
+    z.smoke *= 1 - out * dt; z.co *= 1 - out * dt; z.lel *= 1 - (out + .001) * dt; z.temp += (AMB - z.temp) * .0015 * dt;
+    z.smoke = clamp(z.smoke, 0, 3); z.temp = clamp(z.temp, -10, 400); z.co = clamp(z.co, 0, 20000); z.lel = clamp(z.lel, 0, 100);
+  }
+  for (const s of SENSORS) evalSensor(s, dt);
+  // fire panel logic: confirmation by 2 detectors, gas alarm, manual call point
+  let level = 0, txt = 'Норма';
+  for (const z of ZONES) {
+    const ss = SENSORS.filter(s => s.zone === z.id);
+    const fireAl = ss.filter(s => ['smoke', 'heat'].includes(s.type) && s.state === 'alarm').length;
+    const manual = ss.some(s => s.type === 'manual' && s.state === 'alarm');
+    const gas = ss.some(s => (s.type === 'gas_lel' || s.type === 'gas_co') && s.state === 'alarm');
+    const pre = ss.some(s => s.state === 'pre_alarm' || s.state === 'alarm');
+    if ((fireAl >= 2 || manual) && !z.confirmed) { z.confirmed = true; log(`ПОЖАР подтверждён: ${z.name} (${manual ? 'ручной извещатель' : fireAl + ' датчика'})`, 'e-alarm'); emit('incident', { zone_id: z.id, kind: 'fire', level: 'fire' }); }
+    if (gas && !z.gasConfirmed) { z.gasConfirmed = true; log(`ГАЗ: ${z.name} — опасная концентрация`, 'e-alarm'); emit('incident', { zone_id: z.id, kind: 'gas', level: 'gas' }); }
+    if (z.confirmed && level < 3) { level = 3; txt = 'ПОЖАР · ' + z.name; }
+    else if (z.gasConfirmed && level < 3) { level = 3; txt = 'ГАЗ · ' + z.name; }
+    else if (pre && level < 2) { level = 2; txt = 'Внимание · ' + z.name; }
+  }
+  if (SENSORS.some(s => s.state === 'offline') && level < 1) { level = 1; txt = 'Неисправность'; }
+  if (level !== statusLevel || txt !== statusText) {
+    statusLevel = level; statusText = txt;
+    const el = document.getElementById('status'); el.textContent = txt; el.className = 'pill ' + (level >= 3 ? 'bad' : level >= 1 ? 'warn' : 'ok');
+    drawPanel(level >= 3 ? (txt.startsWith('ГАЗ') ? 'ГАЗ' : 'ПОЖАР') : level === 2 ? 'ВНИМАНИЕ' : level === 1 ? 'НЕИСПР.' : 'НОРМА', level >= 3 ? '#f87171' : level >= 1 ? '#fde047' : '#4ade80');
+  }
+  if (level >= 3 && !sirenOn && !sirenSilenced) {
+    sirenOn = alertsOn; if (alertsOn) startEvac('сработала автоматика, включены сирены');
+  }
+  // people
+  PEOPLE.forEach((P, i) => {
+    const zp = zoneAt(P.root.position.x, P.root.position.z);
+    if (zp && P.state !== 'out') {
+      P.fedCO += zp.co * (dt / 60) / 35000;
+      if (zp.temp > 30) P.fedHeat += (dt / 60) / (5e7 * Math.pow(zp.temp, -3.4));
+    }
+    const fed = Math.max(P.fedCO, P.fedHeat);
+    if (P.state === 'sit' && P.alertAt === null && zp) {
+      const sees = zp.smoke > .3 || HAZ.some(h => h.active && h.stage > 0 && h.zone === zp.id) || zp.lel > 30;
+      if (sees) { P.alertAt = simT + 4 + rnd() * 6; log(`${P.label} сам заметил опасность`, 'e-pre'); }
+    }
+    if (P.state === 'sit' && P.alertAt !== null && simT >= P.alertAt) { P.state = 'stand'; P.t = 0; P.route = chooseRoute(P, i); P.wp = 0; }
+    if (P.state === 'stand') { P.t += dt; applyPose(P, POSE.sit, POSE.stand, clamp(P.t / 1.2, 0, 1)); if (P.t > 1.2) P.state = 'walk'; }
+    if (P.state === 'walk') {
+      if (fed >= 1) { P.state = 'down'; log(`${P.label}: потерял сознание (FED ≥ 1)`, 'e-alarm'); return; }
+      const vis = zp ? zp.smoke : 0, v = 1.25 * clamp(1 - vis / .9, .35, 1) * (fed > .3 ? .6 : 1);
+      let step = v * dt;
+      while (step > 0 && P.wp < P.route.length) {
+        const [tx, tz] = P.route[P.wp], dx = tx - P.root.position.x, dz = tz - P.root.position.z, d = Math.hypot(dx, dz);
+        if (d < 1e-3) { P.wp++; continue; }
+        const mv = Math.min(step, d); P.root.position.x += dx / d * mv; P.root.position.z += dz / d * mv; step -= mv;
+        P.targetRot = Math.atan2(dx, dz); if (mv >= d - 1e-4) P.wp++;
+      }
+      P.phase += v * dt * 5.5;
+      if (P.wp >= P.route.length) { P.state = 'out'; P.evacT = simT; log(`${P.label} эвакуирован(а) за ${Math.round(simT - P.alertAt)} с`, 'e-ok'); applyPose(P, POSE.stand); }
+    }
+  });
+}
+
+// ================= UI wiring =================
+const hzEl = document.getElementById('hazards');
+function renderHazButtons() {
+  hzEl.innerHTML = '';
+  for (const h of HAZ) {
+    const b = document.createElement('button'); b.className = 'hz' + (h.active ? ' active' : '');
+    b.innerHTML = `<b>${h.n}</b><span>${h.name}<small>${h.active ? '● ' + h.stages[h.stage].label + ' · нажмите, чтобы остановить' : h.sub}</small></span>`;
+    b.onclick = () => toggleHazard(h); hzEl.appendChild(b);
+  }
+}
+renderHazButtons();
+document.getElementById('btnEvac').onclick = () => startEvac('запущена вручную');
+document.getElementById('btnReset').onclick = resetAll;
+document.getElementById('selSpeed').onchange = (e) => speed = +e.target.value;
+document.getElementById('chkAlerts').onchange = (e) => { alertsOn = e.target.checked; log(alertsOn ? 'Оповещение включено' : 'Оповещение ОТКЛЮЧЕНО — люди узнают о пожаре сами', alertsOn ? 'e-ok' : 'e-pre'); };
+const btnWalls = document.getElementById('btnWalls');
+btnWalls.onclick = () => { wallH = wallH > 2 ? WALL_H_LOW : WALL_H_FULL; btnWalls.classList.toggle('on', wallH < 2); btnWalls.textContent = wallH < 2 ? 'Полные стены' : 'Низкие стены'; buildWalls(); };
+let fly = null;
+function flyTo(target, pos) { fly = { t: 0, ft: controls.target.clone(), fp: camera.position.clone(), tt: target, tp: pos }; }
+document.getElementById('btnTop').onclick = () => flyTo(new V3(7, 0, 5), new V3(7, 21, 5.6));
+function resetAll() {
+  // new session: jump the simulation clock forward so the AI history of the previous run is not mixed in
+  if (simT > 0) simEpoch += simT * 1000 + 6 * 3600e3;
+  window.__tgHello?.();
+  simT = 0; evacuating = false; sirenOn = false; sirenSilenced = false; statusLevel = -1; resetZones();
+  for (const h of HAZ) { h.active = false; h.stage = 0; h.t = 0; h.fire.visible = false; }
+  for (const s of SENSORS) { s.offline = false; s.pressed = false; s.ror = 0; s.prevT = AMB; s.state = '_'; setSensorState(s, 'normal'); }
+  for (const z of ZONES) { z.confirmed = false; z.gasConfirmed = false; }
+  for (const d of doorLeaves) if (d.isExit) { d.target = 0; }
+  PEOPLE.forEach(P => { Object.assign(P, { state: 'sit', t: 0, wp: 0, route: null, fedCO: 0, fedHeat: 0, alertAt: null, phase: 0 }); P.root.position.set(P.seat.x, 0, P.seat.z); P.root.rotation.set(0, P.seat.rot, 0); applyPose(P, POSE.sit); });
+  logEl.innerHTML = ''; log('Сброс. Все системы в норме.', 'e-ok'); renderHazButtons();
+}
+
+// picking
+const ray = new THREE.Raycaster(); ray.params.Points = { threshold: 0 };
+const mouse = new THREE.Vector2(); const tip = document.getElementById('tip');
+const pickables = [...floors, ...SENSORS.map(s => s.g), ...HAZ.map(h => h.badge), ...PEOPLE.map(p => p.root)];
+function pick(ev) {
+  mouse.set(ev.clientX / innerWidth * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1); ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(pickables, true);
+  const order = { hazard: 0, sensor: 1, person: 2, zone: 3 };
+  let best = null; for (const h of hits) { const p = h.object.userData.pick; if (!p) continue; if (!best || order[p.kind] < order[best.kind]) best = p; if (p.kind === 'hazard') break; }
+  return best;
+}
+function tipText(p) {
+  if (p.kind === 'sensor') { const s = p.ref; if (s.type === 'multi') return `${s.id}\n${TYPE_RU.multi} · ${s.model}\nСостояние: ${STATE_RU[s.state] || s.state}\nДым ${s.value.toFixed(3)} дБ/м · ${(s.temp || 22).toFixed(1)} °C · CO ${(s.coV || 0).toFixed(0)} ppm\nКлик — оборвать/вернуть связь`; const val = s.type in UNITS ? `\nЗначение: ${s.type === 'heat' ? s.value.toFixed(1) : s.type === 'smoke' ? s.value.toFixed(3) : s.value.toFixed(1)} ${UNITS[s.type]}` : ''; return `${s.id}\n${TYPE_RU[s.type]} · ${s.model}\nСостояние: ${STATE_RU[s.state] || s.state}${val}\n${s.type !== 'panel' ? 'Клик — оборвать/вернуть связь' : ''}`; }
+  if (p.kind === 'hazard') { const h = p.ref; return `Источник ${h.n}: ${h.name}\n${h.sub}\nКлик — ${h.active ? 'остановить' : 'запустить'}`; }
+  if (p.kind === 'person') { const P = p.ref; const st = { sit: 'работает', stand: 'встаёт', walk: 'эвакуируется', out: 'снаружи', down: 'без сознания' }[P.state]; return `${P.label}\n${st}\nFED: CO ${P.fedCO.toFixed(2)} · тепло ${P.fedHeat.toFixed(2)}\nУпрощённая модель, не медицинская оценка`; }
+  const r = p.ref.aiRisk; return `${p.ref.name}${r ? `\nAI-прогноз: ${(r.prob * 100).toFixed(0)}% в ближайший час` : ''}\nКлик — приблизить`;
+}
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', e => downAt = [e.clientX, e.clientY]);
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  const p = pick(e); if (!p) return;
+  if (p.kind === 'hazard') toggleHazard(p.ref);
+  else if (p.kind === 'sensor' && p.ref.type !== 'panel') {
+    const s = p.ref;
+    if (s.type === 'manual' && !s.offline && !e.shiftKey && s.state !== 'alarm') { s.pressed = true; log(`Нажат ручной извещатель ${s.id}`, 'e-alarm'); return; }
+    s.offline = !s.offline; if (!s.offline) { s.state = 'offline'; setSensorState(s, 'normal'); } else setSensorState(s, 'offline', 'нет heartbeat 30 с');
+  }
+  else if (p.kind === 'zone') { const z = p.ref, c = new V3((z.x0 + z.x1) / 2, 0, (z.z0 + z.z1) / 2); const sz = Math.max(z.x1 - z.x0, z.z1 - z.z0); flyTo(c, c.clone().add(new V3(sz * .55, sz * .85 + 2, sz * .75 + 1.5))); }
+});
+renderer.domElement.addEventListener('pointermove', e => {
+  if (e.buttons) { tip.style.display = 'none'; return; }
+  const p = pick(e);
+  if (!p) { tip.style.display = 'none'; renderer.domElement.style.cursor = ''; return; }
+  tip.textContent = tipText(p); tip.style.display = 'block';
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - 270) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+  renderer.domElement.style.cursor = p.kind === 'zone' ? 'zoom-in' : 'pointer';
+});
+
+// ================= Panels refresh =================
+const ztab = document.getElementById('ztab'), peopleEl = document.getElementById('people');
+function refreshPanels() {
+  document.getElementById('clock').textContent = fmtT(simT);
+  let html = '<tr><th>Зона</th><th>Дым</th><th>T °C</th><th>CO</th><th>CH₄</th><th title="AI-прогноз сервера: вероятность возгорания в ближайший час">AI</th></tr>';
+  for (const z of ZONES) {
+    const c = (v, w, b) => v >= b ? 'b' : v >= w ? 'w' : '';
+    html += `<tr><td>${z.name.split(' ·')[0]}</td><td class="${c(z.smoke, .05, .15)}">${z.smoke.toFixed(2)}</td><td class="${c(z.temp, 45, 57)}">${z.temp.toFixed(0)}</td><td class="${c(z.co, 50, 100)}">${z.co.toFixed(0)}</td><td class="${c(z.lel, 10, 20)}">${z.lel.toFixed(0)}%</td><td class="${z.aiRisk ? (z.aiRisk.level === 'high' ? 'b' : z.aiRisk.level === 'elevated' ? 'w' : '') : ''}">${z.aiRisk ? (z.aiRisk.prob * 100).toFixed(0) + '%' : '—'}</td></tr>`;
+  }
+  ztab.innerHTML = html;
+  peopleEl.innerHTML = PEOPLE.map(P => { const f = Math.max(P.fedCO, P.fedHeat); const col = injuryCol(f, P.state); const st = { sit: '', stand: '↑', walk: '→', out: '✓', down: '✕' }[P.state]; return `<span><span class="dot" style="background:#${col.toString(16).padStart(6, '0')}"></span>${P.label} ${st} <span class="muted">${f.toFixed(2)}</span></span>`; }).join('');
+}
+function injuryCol(f, st) { if (st === 'down') return 0x7f1d1d; return f < .1 ? 0x22c55e : f < .3 ? 0xfacc15 : f < .6 ? 0xf97316 : f < 1 ? 0xef4444 : 0x7f1d1d; }
+
+// ================= Render loop =================
+const clock = new THREE.Clock(); let acc = 0, panelAcc = 0, blink = 0;
+resetAll();
+document.getElementById('loading').remove();
+renderer.setAnimationLoop(() => {
+  const rdt = Math.min(clock.getDelta(), .1), t = clock.elapsedTime;
+  acc += rdt * speed; const stepDt = speed >= 60 ? .5 : .1; while (acc >= stepDt) { simStep(stepDt); acc -= stepDt; }
+  // camera fly
+  if (fly) { fly.t = Math.min(1, fly.t + rdt / .9); const e = 1 - Math.pow(1 - fly.t, 3); controls.target.lerpVectors(fly.ft, fly.tt, e); camera.position.lerpVectors(fly.fp, fly.tp, e); if (fly.t >= 1) fly = null; }
+  controls.update();
+  // doors
+  for (const d of doorLeaves) if (d.isExit && d.target !== undefined) { d.pivot.rotation.y += (d.target - d.pivot.rotation.y) * Math.min(1, rdt * 3); }
+  // smoke & gas layers
+  for (const z of ZONES) {
+    const dep = clamp(z.smoke * 7, .15, 2.6), op = clamp(z.smoke * 2.2, 0, .7);
+    z.smokeP.material.opacity = op; z.smokeP.visible = op > .01;
+    const hot = clamp((z.temp - AMB) / 120, 0, 1); z.smokeP.material.color.setRGB(.55 - hot * .3, .57 - hot * .32, .6 - hot * .34);
+    const gop = clamp(z.lel / 45, 0, .7); z.gasP.material.opacity = gop; z.gasP.visible = gop > .01;
+    const top = Math.min(wallH > 2 ? 2.85 : 2.85, 2.85);
+    if (z.smokeP.visible || z.gasP.visible) {
+      const a = z.smokeP.geometry.attributes.position.array, b = z.gasP.geometry.attributes.position.array, gdep = clamp(z.lel / 25, .2, 2.2);
+      z.seedPts.forEach(([x, u, zz, ph], i) => {
+        const dx = Math.sin(t * .15 + ph) * .25, dz = Math.cos(t * .12 + ph) * .25;
+        a[i * 3] = x + dx; a[i * 3 + 1] = top - u * dep; a[i * 3 + 2] = zz + dz;
+        if (i * 3 < b.length) { b[i * 3] = x - dx; b[i * 3 + 1] = top - u * gdep; b[i * 3 + 2] = zz - dz; }
+      });
+      z.smokeP.geometry.attributes.position.needsUpdate = true; z.gasP.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+  // plumes, flames, glow
+  let li = 0; fireLights.forEach(l => l.intensity = 0);
+  for (const h of HAZ) {
+    const st = h.stages[h.stage], on = h.active;
+    const pl = h.plume; pl.visible = on && !h.gas && (st.smoke || 0) >= .001; // a hidden precursor is invisible to the eye
+    if (pl.visible) {
+      const arr = pl.geometry.attributes.position.array, rise = st.fire ? 1.1 : .45;
+      pl.material.opacity = st.fire ? .75 : .45; pl.material.color.setHex(st.fire ? 0x3d4146 : 0x8d9298); pl.material.size = st.fire ? 1.0 : .6;
+      h.plumeSeeds.forEach(([u, ph, r], i) => {
+        const k = (u + t * rise * .25) % 1, y = h.pos[1] + k * (2.85 - h.pos[1]);
+        arr[i * 3] = h.pos[0] + Math.sin(ph + t * .7) * (.05 + k * .6 * r); arr[i * 3 + 1] = y; arr[i * 3 + 2] = h.pos[2] + Math.cos(ph + t * .6) * (.05 + k * .6 * r);
+      });
+      pl.geometry.attributes.position.needsUpdate = true;
+    }
+    if (h.gas && on) {
+      const arr = pl.geometry.attributes.position.array; pl.visible = true; pl.material.color.setHex(0xc8f07a); pl.material.opacity = .4; pl.material.size = .5;
+      h.plumeSeeds.forEach(([u, ph, r], i) => { const k = (u + t * .3) % 1; arr[i * 3] = h.pos[0] + Math.sin(ph) * k * .5 * r; arr[i * 3 + 1] = h.pos[1] + k * 1.8; arr[i * 3 + 2] = h.pos[2] - .1 + Math.cos(ph) * k * .3 * r; });
+      pl.geometry.attributes.position.needsUpdate = true;
+    }
+    const fireOn = on && !!st.fire; h.fire.visible = fireOn;
+    if (fireOn) {
+      const grow = clamp(h.t / 40, .35, 1.4) * (st.fire || 1);
+      h.fire.children.forEach((c, i) => { c.scale.set(grow, grow * (.8 + Math.sin(t * 12 + i * 2) * .25), grow); });
+      if (li < fireLights.length) { const L = fireLights[li++]; L.position.set(h.pos[0], h.fire.position.y + .6, h.pos[2]); L.intensity = (3 + Math.sin(t * 17) * .8 + Math.sin(t * 7.3) * .6) * grow * 10; }
+    }
+    if (h.glow) for (const m of h.glow) m.emissiveIntensity = on ? (st.fire ? 1.4 : st.ramp ? .35 * Math.min(h.t / st.dur, 1) : .5 + Math.sin(t * 6) * .3) : (m === M.microWin ? .15 : 0);
+  }
+  // sirens
+  blink += rdt; const sOn = sirenOn && (Math.floor(blink * 2.5) % 2 === 0);
+  sirenMat.emissiveIntensity = sOn ? 3 : 0; sirenLights.forEach(h => h.scale.setScalar(sOn ? .9 : .01));
+  // AI risk tint on the floor (server forecast)
+  for (const z of ZONES) { const r = z.aiRisk, k = !r ? 0 : r.level === 'high' ? .28 + Math.sin(t * 3) * .1 : r.level === 'elevated' ? .12 : 0; z.floorMesh.material.emissiveIntensity = k; }
+  // sensors pulse
+  for (const s of SENSORS) if (s.state === 'alarm') s.halo.scale.setScalar(.5 + Math.sin(t * 8) * .12);
+  // people animation
+  for (const P of PEOPLE) {
+    if (P.state === 'walk') { applyPose(P, POSE.stand, POSE.stand, 0, P.phase); if (P.targetRot !== undefined) { let d = P.targetRot - P.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); P.root.rotation.y += d * Math.min(1, rdt * 8); } }
+    else if (P.state === 'down' && P.root.rotation.z < PI / 2 - .01) { P.root.rotation.z += (PI / 2 - P.root.rotation.z) * Math.min(1, rdt * 4); P.root.position.y = Math.sin(P.root.rotation.z) * .14; }
+    const f = Math.max(P.fedCO, P.fedHeat); P.ring.material.color.setHex(injuryCol(f, P.state)); P.ring.visible = P.state !== 'down';
+  }
+  RACK_E.emissiveIntensity = 1.0 + Math.sin(t * 9) * .25;
+  panelAcc += rdt; if (panelAcc > .25) { panelAcc = 0; refreshPanels(); }
+  renderer.render(scene, camera);
+});
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+// ================= Link to TutinGuard backend (contract v1.0) =================
+function valuesOf(s) {
+  const v = +s.value || 0;
+  switch (s.type) {
+    case 'smoke': return { obscuration_db_m: +v.toFixed(3), dust_pct: 8 };
+    case 'multi': return { obscuration_db_m: +v.toFixed(3), temp_c: +(s.temp || AMB).toFixed(1), co_ppm: +(s.coV || 0).toFixed(0) };
+    case 'heat': return { temp_c: +(v || AMB).toFixed(1), ror_c_min: +s.ror.toFixed(1) };
+    case 'gas_lel': return { lel_pct: +v.toFixed(1), gas: 'CH4' };
+    case 'gas_co': return { co_ppm: +v.toFixed(0) };
+    case 'manual': return { pressed: !!s.pressed };
+    case 'panel': return { mains_ok: true, battery_ok: true, line_faults: SENSORS.filter(q => q.offline).length };
+  }
+  return {};
+}
+const LINK = (() => {
+  const qs = new URLSearchParams(location.search), el = document.getElementById('link');
+  const auto = location.protocol.startsWith('http') ? (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/ingest' : null;
+  let url = qs.get('ws') || auto; const token = qs.get('token');
+  if (url && token) url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
+  let ws = null, everOpen = false, fails = 0, sent = 0, stopped = false;
+  const queue = []; const seqs = {};
+  const set = (txt, cls, title = '') => { el.textContent = txt; el.className = 'pill ' + cls; el.title = title; };
+  function send(msg, important = false) {
+    if (ws && ws.readyState === 1) { ws.send(JSON.stringify(msg)); sent++; return; }
+    if (important && queue.length < 300) queue.push(msg);
+  }
+  function hello() {
+    send({ type: 'hello', schema: '1.0', ts: new Date().toISOString(), site_id: 'office-01', role: 'simulator', simulated: true,
+      site_name: 'Офис IT-компании (демо)',
+      zones: ZONES.map(z => ({ zone_id: z.id, name: z.name, polygon: [[z.x0, z.z0], [z.x1, z.z0], [z.x1, z.z1], [z.x0, z.z1]] })),
+      devices: SENSORS.map(s => ({ device_id: s.id, zone_id: s.zone, device_type: s.type, model: s.model, pos: { x: s.x, y: s.y, z: s.z } })) });
+  }
+  function connect() {
+    if (!url || stopped) { set('автономно', 'warn', 'Страница открыта не с сервера TutinGuard: данные никуда не отправляются'); return; }
+    try { ws = new WebSocket(url); } catch (e) { fails++; return retry(); }
+    ws.onopen = () => { everOpen = true; fails = 0; set('подключено', 'ok', url); log('Связь с сервером установлена', 'e-ok'); hello(); while (queue.length) send(queue.shift()); };
+    ws.onmessage = (e) => { try { onCommand(JSON.parse(e.data)); } catch (err) { console.warn('[TutinGuard] bad message', err); } };
+    ws.onclose = () => { if (everOpen) log('Связь с сервером потеряна, переподключение…', 'e-pre'); ws = null; fails++; retry(); };
+    ws.onerror = () => {};
+  }
+  function retry() {
+    if (!everOpen && fails >= 3 && !qs.get('ws')) { stopped = true; set('автономно', 'warn', 'Сервер не найден или неверный ?token= — сцена работает без отправки данных'); return; }
+    set('нет связи', 'bad', 'повтор через ' + Math.min(10, 2 * fails) + ' с'); setTimeout(connect, Math.min(10, 2 * fails) * 1000);
+  }
+  window.__tgHello = () => { if (ws && ws.readyState === 1) hello(); };
+  function nextSeq(id) { return (seqs[id] = (seqs[id] || 0) + 1); }
+  connect();
+  return { send, nextSeq, get open() { return !!ws && ws.readyState === 1; }, get sent() { return sent; } };
+})();
+// forward contract messages produced by the scene
+BUS.addEventListener('event', e => LINK.send(e.detail, true));
+// telemetry every 2 s, heartbeat every 10 s (silent devices are skipped: the server will notice)
+setInterval(() => {
+  for (const s of SENSORS) if (!s.offline) {
+    const msg = { type: 'telemetry', schema: '1.0', ts: vnow(), site_id: 'office-01', simulated: true, seq: LINK.nextSeq(s.id),
+      zone_id: s.zone, device_id: s.id, device_type: s.type, model: s.model, values: valuesOf(s), state: s.state };
+    LINK.send(msg); BUS.dispatchEvent(new CustomEvent('telemetry', { detail: msg }));
+  }
+}, 2000);
+setInterval(() => LINK.send({ type: 'heartbeat', schema: '1.0', ts: vnow(), site_id: 'office-01', simulated: true,
+  devices: SENSORS.filter(s => !s.offline).map(s => ({ device_id: s.id, seq: LINK.nextSeq(s.id) })) }), 10000);
+const OCC_STATUS = { sit: 'idle', stand: 'alerted', walk: 'evacuating', out: 'evacuated', down: 'incapacitated' };
+const INJ = (f, st) => st === 'down' ? 'critical' : f < .1 ? 'none' : f < .3 ? 'light' : f < .6 ? 'moderate' : f < 1 ? 'severe' : 'critical';
+setInterval(() => PEOPLE.forEach((P, i) => {
+  const p = P.root.position, z = zoneAt(p.x, p.z), f = Math.max(P.fedCO, P.fedHeat);
+  LINK.send({ type: 'occupant', schema: '1.0', ts: vnow(), site_id: 'office-01', simulated: true,
+    occupant_id: 'P-' + String(i + 1).padStart(2, '0'), name: P.label, zone_id: z ? z.id : null, pos: { x: +p.x.toFixed(2), y: 0, z: +p.z.toFixed(2) },
+    status: P.state === 'sit' && P.alertAt !== null ? 'alerted' : OCC_STATUS[P.state],
+    exposure: z ? { co_ppm: +z.co.toFixed(0), temp_c: +z.temp.toFixed(1), visibility_m: +(z.smoke > .01 ? Math.min(30, 3 / (z.smoke * .23)) : 30).toFixed(1) } : null,
+    fed_co: +P.fedCO.toFixed(3), fed_heat: +P.fedHeat.toFixed(3), injury: INJ(f, P.state) });
+}), 2000);
+// commands from the operator panel / auto-escalation
+function applyRisk(list) {
+  for (const r of list) {
+    const z = ZMAP[r.zone_id]; if (!z) continue;
+    if (r.level === 'high' && z.aiRisk?.level !== 'high') log(`AI-прогноз: ${z.name} — вероятность возгорания ${(r.prob * 100).toFixed(0)}% в ближайший час`, 'e-pre');
+    z.aiRisk = r;
+  }
+}
+function onCommand(m) {
+  if (m.type === 'error') { console.warn('[TutinGuard] server rejected a message:', m); return; }
+  if (m.type === 'risk') { applyRisk(m.zones || []); return; }
+  if (m.type !== 'command') return;
+  const by = m.by === 'auto-escalation' ? 'автоэскалация' : 'оператор';
+  let ok = true;
+  switch (m.action) {
+    case 'siren_on': sirenSilenced = false; sirenOn = true; log(`Команда (${by}): включить сирены`, 'e-alarm'); startEvac(`сирены включил ${by}`); break;
+    case 'siren_off': sirenOn = false; sirenSilenced = true; log(`Команда (${by}): выключить сирены`, 'e-info'); break;
+    case 'evacuation_on': sirenSilenced = false; sirenOn = true; startEvac(`команда: ${by}`); break;
+    case 'unlock_exits': for (const d of doorLeaves) if (d.isExit) d.target = (d.pivot.position.z < 1 ? 1 : -1) * 1.6; log(`Команда (${by}): выходы разблокированы`, 'e-info'); break;
+    case 'reset_device': { const s = SENSORS.find(q => q.id === m.device_id); if (s) { s.pressed = false; s.state = 'alarm'; s.state = '_'; setSensorState(s, 'normal'); log(`Команда: сброс ${s.id}`, 'e-info'); } else ok = false; break; }
+    case 'run_test': log('Команда: тест оповещения', 'e-info'); sirenOn = true; setTimeout(() => { if (!evacuating) sirenOn = false; }, 3000); break;
+    case 'reset_all': resetAll(); break;
+    default: ok = false;
+  }
+  LINK.send({ type: 'ack', schema: '1.0', ts: new Date().toISOString(), site_id: 'office-01', simulated: true, command_id: m.command_id, ok });
+}
+</script>
+</body>
+</html>
