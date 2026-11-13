@@ -30,6 +30,9 @@ services:
       OFFLINE_SECONDS: ${OFFLINE_SECONDS:-30}
       ESCALATE_SECONDS: ${ESCALATE_SECONDS:-60}
       READINGS_KEEP_HOURS: ${READINGS_KEEP_HOURS:-24}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
+      AUTO_DISPATCH: ${AUTO_DISPATCH:-escalation}
+      BRIGADE_ETA_S: ${BRIGADE_ETA_S:-45}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - ./frontend:/app/frontend:ro

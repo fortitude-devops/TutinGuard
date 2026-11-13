@@ -35,6 +35,11 @@ class Site(Base):
     address: Mapped[str] = mapped_column(String(300), default="")
     alert_type: Mapped[int] = mapped_column(Integer, default=3)
     session_started_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)  # last simulator hello/reset
+    session_id: Mapped[str | None] = mapped_column(String(40), nullable=True)        # simulator session (page load / reset)
+    kind: Mapped[str] = mapped_column(String(40), default="office")                   # office | school | mall | warehouse ...
+    floors: Mapped[int] = mapped_column(Integer, default=1)
+    responsible_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(TS, nullable=True, default=utcnow)
 
 
 class Zone(Base):
@@ -110,6 +115,13 @@ class Incident(Base):
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     assignee_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     escalated: Mapped[bool] = mapped_column(Boolean, default=False)
+    # DEMO fire-brigade dispatch (no real call is ever made)
+    brigade_status: Mapped[str | None] = mapped_column(String(20), nullable=True)  # called | en_route | arrived | attack | extinguished
+    brigade_called_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    brigade_arrived_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    brigade_done_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    brigade_eta_s: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    brigade_travel_s: Mapped[int | None] = mapped_column(Integer, nullable=True)  # simulated travel time
 
 
 class IncidentLog(Base):
@@ -174,8 +186,19 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(80))
-    role: Mapped[str] = mapped_column(String(20))  # operator | responsible | technician
+    role: Mapped[str] = mapped_column(String(20))  # operator | responsible | technician | admin
     phone: Mapped[str] = mapped_column(String(32), default="")
+    username: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class AuthToken(Base):
+    __tablename__ = "auth_tokens"
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    last_used: Mapped[datetime] = mapped_column(TS, default=utcnow)
 
 
 class Risk(Base):
@@ -209,8 +232,13 @@ def ensure_columns() -> None:
     """Tiny forward-only migration: add columns introduced after the first release to existing tables."""
     from sqlalchemy import inspect, text
     insp = inspect(engine)
-    wanted = {"sites": [("session_started_at", "TIMESTAMP WITH TIME ZONE")],
-              "readings": [("vts", "TIMESTAMP WITH TIME ZONE")]}
+    T, S40, I, B = "TIMESTAMP WITH TIME ZONE", "VARCHAR(40)", "INTEGER", "BOOLEAN"
+    wanted = {"sites": [("session_started_at", T), ("session_id", S40), ("kind", S40 + " DEFAULT 'office'"),
+                        ("floors", I + " DEFAULT 1"), ("responsible_id", I), ("created_at", T)],
+              "readings": [("vts", T)],
+              "incidents": [("brigade_status", "VARCHAR(20)"), ("brigade_called_at", T), ("brigade_arrived_at", T),
+                            ("brigade_done_at", T), ("brigade_eta_s", I), ("brigade_travel_s", I)],
+              "users": [("username", S40), ("password_hash", "VARCHAR(200)"), ("active", B + " DEFAULT TRUE")]}
     with engine.begin() as conn:
         for table, cols in wanted.items():
             if not insp.has_table(table):
@@ -219,5 +247,5 @@ def ensure_columns() -> None:
             for name, sqltype in cols:
                 if name not in have:
                     if engine.dialect.name == "sqlite":
-                        sqltype = "DATETIME"
+                        sqltype = sqltype.replace("TIMESTAMP WITH TIME ZONE", "DATETIME").replace("TRUE", "1")
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sqltype}"))

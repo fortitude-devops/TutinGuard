@@ -89,6 +89,20 @@
       const s = noiseSrc(); const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 6500; bp.Q.value = 1.2;
       const g = ctx.createGain(); g.gain.value = 0.12; s.connect(bp); bp.connect(g); s.start(); return { out: g, stop: () => s.stop() };
     },
+    // пожарная машина: сирена «вой» (медленный подъём и спад тона)
+    firetruck() {
+      const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = 900;
+      const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = .45;
+      const depth = ctx.createGain(); depth.gain.value = 420; lfo.connect(depth); depth.connect(o.frequency);
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+      const g = ctx.createGain(); g.gain.value = 0.09; o.connect(lp); lp.connect(g);
+      o.start(); lfo.start(); return { out: g, stop: () => { o.stop(); lfo.stop(); } };
+    },
+    // струя воды: широкополосный шум
+    water() {
+      const s = noiseSrc(); const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = .4;
+      const g = ctx.createGain(); g.gain.value = 0.22; s.connect(bp); bp.connect(g); s.start(); return { out: g, stop: () => s.stop() };
+    },
     // фон офиса: вентиляция + гул серверов
     ambience() {
       const s = noiseSrc(brownBuf); const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500;

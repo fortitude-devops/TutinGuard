@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TutinGuard — пульт пожарной безопасности</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z' fill='%230f766e'/%3E%3Cpath d='M16.5 8c1 3.2 4.5 5 4.5 9a5 5 0 0 1-10 0c0-2.2 1.2-3.6 2.3-4.6.2 1.5 1 2.4 2 2.6-.6-2.6.2-4.9 1.2-7z' fill='%23fb923c'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<div id="login" class="hidden">
+  <div class="login-card">
+    <div class="login-hero">
+      <div class="brandmark" data-logo></div>
+      <h1>Пульт пожарной безопасности</h1>
+      <p>Сигналы датчиков дыма, тепла и газа в реальном времени, учёт тревог и действий персонала, AI-прогноз возгорания и контроль обслуживания оборудования.</p>
+      <ul>
+        <li><span>🔥</span><span>Место тревоги на плане объекта, подтверждение двумя извещателями, учёт повторных сигналов</span></li>
+        <li><span>👥</span><span>Роли: дежурный оператор, ответственный сотрудник, техник</span></li>
+        <li><span>🚒</span><span>Карточка вызова 101 и сопровождение бригады — <b>в режиме DEMO</b>, реальные вызовы не отправляются</span></li>
+        <li><span>🤖</span><span>Прогноз медленно развивающихся возгораний по ранним признакам</span></li>
+      </ul>
+      <p class="small mut">Демо-версия для хакатона. Все данные тестовые.</p>
+    </div>
+    <form class="login-form" id="loginForm" autocomplete="on">
+      <h2>Вход в систему</h2>
+      <div class="field"><label for="lu">Логин</label><input class="input" id="lu" name="username" autocomplete="username" required></div>
+      <div class="field"><label for="lp">Пароль</label><input class="input" id="lp" name="password" type="password" autocomplete="current-password" required></div>
+      <div class="err" id="loginErr"></div>
+      <button class="btn primary lg" type="submit">Войти</button>
+      <div class="navsep" style="margin:8px 0 0">Демо-аккаунты · пароль <span class="mono">demo</span></div>
+      <div class="demo-accs" id="demoAccs"></div>
+    </form>
+  </div>
+</div>
+
+<div id="shell" class="hidden">
+  <aside id="side">
+    <div class="brandmark" data-logo></div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <a class="btn sm" href="/sim/" target="_blank" rel="noopener">🧊 3D-симулятор объекта ↗</a>
+      <div class="small mut">TutinGuard · DEMO-сборка<br>Реальные вызовы 101/104 не отправляются</div>
+    </div>
+  </aside>
+  <div id="mainwrap">
+    <div id="banner"></div>
+    <header id="top">
+      <button class="btn sm ghost" id="menuBtn" style="display:none">☰</button>
+      <h1 id="title">Обзор</h1>
+      <select class="input" id="siteSel" style="width:auto;max-width:320px;padding:6px 10px"></select>
+      <span id="simPill" class="pill off">симулятор —</span>
+      <span class="right"></span>
+      <span id="clock"></span>
+      <button class="btn sm" id="btnSound">🔇 Звук</button>
+      <div class="user-chip"><div class="avatar" id="uAva"></div><div class="col" style="gap:0"><b id="uName" style="font-size:13px"></b><span class="small mut" id="uRole"></span></div><button class="btn sm ghost" id="btnLogout" title="Выйти">⎋</button></div>
+    </header>
+    <main id="main"></main>
+  </div>
+</div>
+<div id="scrim"></div>
+<aside id="drawer"><div class="dh"><b id="dTitle" class="grow"></b><button class="btn sm ghost" data-act="closeDrawer">✕</button></div><div class="db" id="dBody"></div></aside>
+<div id="modal"></div>
+<div id="toasts"></div>
+<script src="/sim/sound.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

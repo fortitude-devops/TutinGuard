@@ -17,6 +17,10 @@ from .db import utcnow
 OFFLINE_SECONDS = int(os.getenv("OFFLINE_SECONDS", "30"))
 ESCALATE_SECONDS = int(os.getenv("ESCALATE_SECONDS", "60"))
 FALSE_ALARM_LIMIT = int(os.getenv("FALSE_ALARM_LIMIT", "3"))
+BRIGADE_ETA_S = int(os.getenv("BRIGADE_ETA_S", "45"))   # simulated travel time of the DEMO fire brigade (sim seconds)
+AUTO_DISPATCH = os.getenv("AUTO_DISPATCH", "escalation")  # escalation | confirmed | off
+BRIGADE_RU = {"called": "вызвана (DEMO)", "en_route": "в пути", "arrived": "прибыла", "attack": "тушение",
+              "extinguished": "пожар ликвидирован", "returning": "убывает"}
 
 FIRE_CATEGORIES = {"smoke", "heat", "flame", "multi", "manual"}
 GAS_CATEGORIES = {"gas", "co", "gas_lel", "gas_co"}
@@ -50,7 +54,12 @@ def inc_dict(i: M.Incident, logs: list[M.IncidentLog] | None = None) -> dict:
          "repeat_count": i.repeat_count, "device_ids": i.device_ids, "opened_at": iso(i.opened_at), "level_at": iso(i.level_at),
          "ack_at": iso(i.ack_at), "closed_at": iso(i.closed_at), "result": i.result, "comment": i.comment,
          "assignee_id": i.assignee_id, "escalated": i.escalated,
-         "reaction_s": round(secs(i.ack_at, i.opened_at), 1) if i.ack_at else None}
+         "reaction_s": round(secs(i.ack_at, i.opened_at), 1) if i.ack_at else None,
+         "brigade": None if not i.brigade_status else {
+             "status": i.brigade_status, "status_ru": BRIGADE_RU.get(i.brigade_status, i.brigade_status),
+             "called_at": iso(i.brigade_called_at), "arrived_at": iso(i.brigade_arrived_at), "done_at": iso(i.brigade_done_at),
+             "eta_s": i.brigade_eta_s, "demo": True,
+             "travel_s": i.brigade_travel_s if i.brigade_travel_s is not None else (round(secs(i.brigade_arrived_at, i.brigade_called_at)) if i.brigade_arrived_at and i.brigade_called_at else None)}}
     if logs is not None:
         r["log"] = [{"ts": iso(l.ts), "actor": l.actor, "action": l.action, "comment": l.comment} for l in logs]
     return r
@@ -126,7 +135,7 @@ def restore_link(s: Session, d: M.Device, new_state: str, out: Out):
     if inc and all((s.get(M.Device, i) or d).state != "offline" for i in inc.device_ids or []):
         inc.status, inc.result, inc.closed_at = "closed", "link_restored", utcnow()
         log_incident(s, inc, "auto_close", "связь со всеми устройствами зоны восстановлена")
-        out.append(("ui", {"type": "incident", "data": inc_dict(inc)}))
+        out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
 
 
 # ---------------- incidents ----------------
@@ -157,7 +166,9 @@ def raise_incident(s: Session, site_id: str, zone_id: str | None, kind: str, dev
             inc.level = "fire"
             inc.level_at = utcnow()
             log_incident(s, inc, "confirmed", f"подтверждено {len(ids)} извещателями" if category != "manual" else "ручной извещатель")
-    out.append(("ui", {"type": "incident", "data": inc_dict(inc)}))
+            if AUTO_DISPATCH == "confirmed" and not inc.brigade_status:
+                out += dispatch_brigade(s, inc, "автоматически (пожар подтверждён)")
+    out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
     return inc
 
 
@@ -169,12 +180,23 @@ def handle_message(s: Session, msg) -> Out:
         if site is None:
             site = M.Site(id=msg.site_id, name=msg.site_name or msg.site_id)
             s.add(site)
-        site.session_started_at = now
-        AIBUF.reset(msg.site_id)  # new simulator session: forget the previous minute history
-        LATEST_RISK.pop(msg.site_id, None)
-        for k in [k for k in list(_HIGH) + list(_LOW) if k[0] == msg.site_id]:
-            _HIGH.pop(k, None)
-            _LOW.pop(k, None)
+        new_session = not msg.session_id or msg.session_id != site.session_id
+        if new_session:
+            if site.session_id and msg.session_id:
+                # the simulator was reloaded or reset: the previous run's incidents are history now
+                for inc in s.scalars(select(M.Incident).where(M.Incident.site_id == msg.site_id, M.Incident.status.in_(OPEN))).all():
+                    inc.status, inc.result, inc.closed_at = "closed", "test", now
+                    inc.comment = "закрыт автоматически: симуляция перезапущена"
+                    log_incident(s, inc, "auto_close", "симуляция перезапущена (новая сессия)")
+                    out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
+                s.query(M.Occupant).filter(M.Occupant.site_id == msg.site_id).delete()
+            site.session_started_at = now
+            site.session_id = msg.session_id
+            AIBUF.reset(msg.site_id)  # new simulator session: forget the previous minute history
+            LATEST_RISK.pop(msg.site_id, None)
+            for k in [k for k in list(_HIGH) + list(_LOW) if k[0] == msg.site_id]:
+                _HIGH.pop(k, None)
+                _LOW.pop(k, None)
         for z in msg.zones:
             if z.get("zone_id") and s.get(M.Zone, z["zone_id"]) is None:
                 s.add(M.Zone(id=z["zone_id"], site_id=msg.site_id, name=z.get("name", z["zone_id"]), polygon=z.get("polygon")))
@@ -238,6 +260,32 @@ def handle_message(s: Session, msg) -> Out:
         o.fed_co, o.fed_heat, o.pos, o.exposure, o.updated_at = msg.fed_co, msg.fed_heat, msg.pos, msg.exposure, now
         out.append(("ui", {"type": "occupant", "data": occ_dict(o), "changed": changed}))
 
+    elif isinstance(msg, S.Brigade):
+        inc = s.get(M.Incident, msg.incident_id) if msg.incident_id else None
+        if inc is None:  # brigade started from the scene itself (offline mode / scene button): attach to the open fire
+            inc = s.scalar(select(M.Incident).where(M.Incident.site_id == msg.site_id, M.Incident.kind == "fire",
+                                                    M.Incident.status.in_(OPEN)).order_by(M.Incident.id.desc()))
+            if inc is not None and not inc.brigade_called_at:
+                inc.brigade_called_at = now
+                log_incident(s, inc, "brigade_called", "Пожарные вызваны из симулятора (DEMO — реальный вызов не отправляется)", "симулятор")
+        if inc is not None:
+            inc.brigade_status = msg.status
+            text = {"en_route": "Пожарная бригада выехала (DEMO)", "arrived": "Пожарная бригада прибыла на объект (DEMO)",
+                    "attack": "Бригада начала тушение (DEMO)", "extinguished": "Пожар ликвидирован бригадой (DEMO)",
+                    "returning": "Бригада убывает с объекта (DEMO)"}[msg.status]
+            if msg.status == "arrived":
+                inc.brigade_arrived_at = now
+                if msg.elapsed_s is not None:
+                    inc.brigade_travel_s = round(msg.elapsed_s)
+                    text += f": прибытие через {round(msg.elapsed_s)} с после вызова (время симуляции)"
+                elif inc.brigade_called_at:
+                    text += f": прибытие через {round(secs(now, inc.brigade_called_at))} с после вызова"
+            if msg.status == "extinguished":
+                inc.brigade_done_at = now
+            log_incident(s, inc, "brigade_" + msg.status, text, "пожарная бригада")
+            e = add_event(s, msg.site_id, "brigade_" + msg.status, zone_id=inc.zone_id, category="brigade", source="sim")
+            out += [("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}), ("ui", {"type": "event", "data": ev_dict(e)})]
+
     elif isinstance(msg, S.Ack):
         c = s.get(M.Command, msg.command_id)
         if c:
@@ -274,13 +322,35 @@ def check_escalation(s: Session) -> Out:
     for inc in incs:
         inc.escalated = True
         log_incident(s, inc, "escalated",
-                     f"Не принято оператором за {ESCALATE_SECONDS} с: включены сирены и эвакуация. "
-                     "Вызов 101 сформирован (DEMO — реальный вызов не отправляется).")
+                     f"Не принято оператором за {ESCALATE_SECONDS} с: включены сирены и эвакуация.")
         for action in ("siren_on", "evacuation_on"):
-            out += send_command(s, S.CommandIn(site_id=inc.site_id, action=action, actor="auto-escalation"))
-        out.append(("ui", {"type": "incident", "data": inc_dict(inc)}))
-        out.append(("ui", {"type": "call_101_demo", "data": call_card(s, inc)}))
+            out += send_command(s, S.CommandIn(site_id=inc.site_id, action=action, actor="автоэскалация"))
+        if inc.level == "fire" and AUTO_DISPATCH != "off" and not inc.brigade_status:
+            out += dispatch_brigade(s, inc, "автоэскалация")
+        else:
+            out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
     s.commit()
+    return out
+
+
+def _logs(s: Session, inc: M.Incident):
+    return s.scalars(select(M.IncidentLog).where(M.IncidentLog.incident_id == inc.id).order_by(M.IncidentLog.id)).all()
+
+
+def dispatch_brigade(s: Session, inc: M.Incident, actor: str) -> Out:
+    """DEMO: build the 101 call card and send the virtual brigade to the simulator. Nothing leaves this system."""
+    if inc.kind != "fire":
+        raise ValueError("пожарную бригаду вызывают только по пожару")
+    if inc.brigade_status:
+        raise ValueError("бригада уже вызвана")
+    now = utcnow()
+    inc.brigade_status, inc.brigade_called_at, inc.brigade_eta_s = "called", now, BRIGADE_ETA_S
+    card = call_card(s, inc)
+    log_incident(s, inc, "brigade_called", "Вызов 101 сформирован и «передан» (DEMO — реальный вызов не отправляется). " + card["text"], actor)
+    out = send_command(s, S.CommandIn(site_id=inc.site_id, action="dispatch_brigade", zones=[inc.zone_id] if inc.zone_id else [],
+                                      incident_id=inc.id, eta_s=BRIGADE_ETA_S, actor=actor))
+    out.append(("ui", {"type": "call_101_demo", "data": card}))
+    out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
     return out
 
 
@@ -304,6 +374,10 @@ def send_command(s: Session, cmd: S.CommandIn) -> Out:
     s.flush()
     payload = {"type": "command", "schema": "1.0", "ts": iso(c.ts), "command_id": c.id, "site_id": cmd.site_id,
                "action": cmd.action, "zones": cmd.zones, "device_id": cmd.device_id, "by": cmd.actor}
+    if cmd.incident_id is not None:
+        payload["incident_id"] = cmd.incident_id
+    if cmd.eta_s is not None:
+        payload["eta_s"] = cmd.eta_s
     return [("sim", payload), ("ui", {"type": "command", "data": payload})]
 
 
@@ -329,6 +403,11 @@ def incident_action(s: Session, inc_id: int, action: str, body: S.IncidentAction
         inc.ack_at = inc.ack_at or now
         inc.status = "assigned"
         log_incident(s, inc, "assign", f"назначен: {u.name if u else body.assignee_id}", body.actor)
+    elif action == "dispatch":
+        inc.ack_at = inc.ack_at or now
+        if inc.status == "new":
+            inc.status = "acknowledged"
+        out += dispatch_brigade(s, inc, body.actor)
     elif action == "checking":
         inc.ack_at = inc.ack_at or now
         inc.status = "checking"
@@ -389,7 +468,7 @@ def confirm_forecast(s: Session, site_id: str, zone_id, fire_inc: M.Incident, vt
     if risk and risk.status != "closed":
         risk.status, risk.result, risk.closed_at = "closed", "forecast_confirmed", utcnow()
         log_incident(s, risk, "confirmed", f"прогноз подтвердился: тревога через {lead} мин (инцидент #{fire_inc.id})")
-        out.append(("ui", {"type": "incident", "data": inc_dict(risk)}))
+        out.append(("ui", {"type": "incident", "data": inc_dict(risk, _logs(s, risk))}))
 
 
 def _manage_forecast(s: Session, site_id: str, zone: M.Zone, res: dict, vts_end, threshold: float) -> Out:
@@ -422,7 +501,7 @@ def _manage_forecast(s: Session, site_id: str, zone: M.Zone, res: dict, vts_end,
                                          f"Признаки: {why}. {res.get('advice') or ''}".strip(), "ai")
         s.add(M.Forecast(incident_id=inc.id, site_id=site_id, zone_id=zone.id, opened_vts=_HIGH[key],
                          prob_max=res["prob"], reasons=res["reasons"]))
-        out.append(("ui", {"type": "incident", "data": inc_dict(inc)}))
+        out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
     elif fc is not None:
         fc.prob_max = max(fc.prob_max, res["prob"])
         if res["reasons"]:
@@ -433,7 +512,7 @@ def _manage_forecast(s: Session, site_id: str, zone: M.Zone, res: dict, vts_end,
             if inc and inc.status != "closed":
                 inc.status, inc.result, inc.closed_at = "closed", "risk_cleared", utcnow()
                 log_incident(s, inc, "auto_close", f"признаки исчезли: риск низкий {CLEAR_MIN}+ мин", "ai")
-                out.append(("ui", {"type": "incident", "data": inc_dict(inc)}))
+                out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
     return out
 
 

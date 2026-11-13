@@ -12,6 +12,7 @@ import websockets
 
 BASE = os.getenv("SMOKE_BASE", "http://localhost:8000")
 TOKEN = os.getenv("INGEST_TOKEN", "")
+DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "demo")
 
 
 def now():
@@ -45,6 +46,14 @@ async def main() -> int:
             print("\nБэкенд не ответил за 60 с. Посмотрите `docker compose logs backend`"
                   " (чаще всего — неверный POSTGRES_PASSWORD или старая база: `docker compose down -v`).")
             return 1
+        check((await c.get("/api/incidents")).status_code == 401, "без входа API закрыто (401)")
+        r = await c.post("/api/auth/login", json={"username": "operator", "password": DEMO_PASSWORD})
+        check(r.status_code == 200, "вход оператора (operator / пароль из DEMO_PASSWORD)")
+        if r.status_code != 200:
+            return 1
+        c.headers["Authorization"] = "Bearer " + r.json()["token"]
+        r = await c.post("/api/auth/login", json={"username": "technician", "password": DEMO_PASSWORD})
+        tech = {"Authorization": "Bearer " + r.json()["token"]} if r.status_code == 200 else {}
         check((await c.get("/api/site")).status_code == 200, "демо-объект office-01 загружен")
         card = await c.get("/api/ai/model")
         check(card.status_code == 200, "AI-модель прогноза загружена" + (
@@ -70,6 +79,11 @@ async def main() -> int:
             check(i["level"] == "fire", "пожар подтверждён двумя извещателями")
             r = await c.post(f"/api/incidents/{i['id']}/ack", json={"actor": "smoke-test"})
             check(r.status_code == 200 and r.json()["status"] == "acknowledged", "оператор принял инцидент")
+            r = await c.post(f"/api/incidents/{i['id']}/close", headers=tech, json={"result": "test"})
+            check(r.status_code == 403, "техник не может закрыть пожарный инцидент (роли работают)")
+            r = await c.post(f"/api/incidents/{i['id']}/dispatch", json={})
+            check(r.status_code == 200 and (r.json().get("brigade") or {}).get("status") == "called",
+                  "вызов пожарных сформирован (DEMO, реальный вызов не отправляется)")
             r = await c.post(f"/api/incidents/{i['id']}/close", json={"actor": "smoke-test", "result": "test", "comment": "самопроверка"})
             check(r.status_code == 200 and r.json()["status"] == "closed", "инцидент закрыт с результатом «тест»")
         # Состояние датчика может уже перезаписать открытая 3D-сцена, поэтому проверяем журнал событий

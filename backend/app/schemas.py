@@ -28,6 +28,7 @@ class Hello(Msg):
     type: Literal["hello"]
     role: str = "simulator"
     site_name: str | None = None
+    session_id: str | None = None   # new id on page load / reset → previous session's incidents are closed
     zones: list[dict[str, Any]] = []
     devices: list[DeviceInfo] = []
 
@@ -81,13 +82,22 @@ class Occupant(Msg):
     injury: Literal["none", "light", "moderate", "severe", "critical"] = "none"
 
 
+class Brigade(Msg):
+    """DEMO fire brigade progress reported by the simulator (the call itself is never sent anywhere)."""
+    type: Literal["brigade"]
+    status: Literal["en_route", "arrived", "attack", "extinguished", "returning"]
+    incident_id: int | None = None
+    zone_id: str | None = None
+    elapsed_s: float | None = None   # simulation seconds since the call
+
+
 class Ack(Msg):
     type: Literal["ack"]
     command_id: str
     ok: bool = True
 
 
-IngestMsg = TypeAdapter(Annotated[Union[Hello, Telemetry, Event, Heartbeat, Occupant, Ack], Field(discriminator="type")])
+IngestMsg = TypeAdapter(Annotated[Union[Hello, Telemetry, Event, Heartbeat, Occupant, Brigade, Ack], Field(discriminator="type")])
 
 
 # ---- REST bodies ----
@@ -100,12 +110,93 @@ class IncidentAction(BaseModel):
 
 class CommandIn(BaseModel):
     site_id: str = "office-01"
-    action: Literal["siren_on", "siren_off", "evacuation_on", "unlock_exits", "reset_device", "run_test", "reset_all"]
+    action: Literal["siren_on", "siren_off", "evacuation_on", "unlock_exits", "reset_device", "run_test", "reset_all",
+                    "dispatch_brigade"]
     zones: list[str] = []
     device_id: str | None = None
+    incident_id: int | None = None
+    eta_s: int | None = None
     actor: str = "operator"
 
 
 class CloseTask(BaseModel):
     actor: str = "technician"
     comment: str = ""
+
+
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class SiteIn(BaseModel):
+    site_id: str | None = Field(None, pattern=r"^[a-z0-9][a-z0-9\-_]{1,40}$")
+    name: str = Field(min_length=2, max_length=200)
+    address: str = ""
+    kind: str = "office"
+    floors: int = Field(1, ge=1, le=200)
+    alert_type: int = Field(3, ge=1, le=5)
+    responsible_id: int | None = None
+
+
+class SitePatch(BaseModel):
+    name: str | None = None
+    address: str | None = None
+    kind: str | None = None
+    floors: int | None = Field(None, ge=1, le=200)
+    alert_type: int | None = Field(None, ge=1, le=5)
+    responsible_id: int | None = None
+
+
+class ZoneIn(BaseModel):
+    zone_id: str | None = Field(None, pattern=r"^[a-z0-9][a-z0-9\-_]{0,40}$")
+    name: str = Field(min_length=1, max_length=200)
+    type: str = "room"
+    floor: int = 1
+    max_people: int = 0
+    polygon: list[list[float]] | None = None
+
+
+class ZonePatch(BaseModel):
+    name: str | None = None
+    type: str | None = None
+    floor: int | None = None
+    max_people: int | None = None
+    polygon: list[list[float]] | None = None
+
+
+DEVICE_TYPES = Literal["smoke", "heat", "multi", "flame", "gas_lel", "gas_co", "manual", "panel"]
+
+
+class DeviceIn(BaseModel):
+    device_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9\-_]{1,40}$")
+    site_id: str
+    zone_id: str | None = None
+    device_type: DEVICE_TYPES
+    model: str = ""
+    pos: dict[str, float] | None = None
+    installed: str | None = None
+
+
+class DevicePatch(BaseModel):
+    zone_id: str | None = None
+    device_type: DEVICE_TYPES | None = None
+    model: str | None = None
+    pos: dict[str, float] | None = None
+
+
+class TaskIn(BaseModel):
+    device_id: str
+    reason: str = Field(min_length=2, max_length=200)
+    technician_id: int | None = None
+
+
+class TaskPatch(BaseModel):
+    technician_id: int | None = None
+    comment: str | None = None
+
+
+class InspectionIn(BaseModel):
+    device_id: str
+    due_date: str
+    technician_id: int | None = None
