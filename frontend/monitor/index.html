@@ -47,6 +47,7 @@
   <span class="stat">просрочено проверок <span id="sOver">—</span></span>
   <span style="flex:1"></span>
   <label class="muted">Я — <select id="actor"><option value="operator">оператор</option><option value="responsible">ответственный</option><option value="technician">техник</option></select></label>
+  <button id="btnSound" title="Включить звук">🔇 Звук</button>
   <a href="/sim/" target="_blank">открыть 3D-симулятор ↗</a>
 </header>
 <main>
@@ -80,6 +81,7 @@
     <div id="insp"></div>
   </section>
 </main>
+<script src="/sim/sound.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const STATE = { normal: ['норма', 'ok'], pre_alarm: ['внимание', 'warn'], alarm: ['ТРЕВОГА', 'bad'], offline: ['нет связи', 'off'], fault: ['неисправен', 'warn'], test: ['тест', 'warn'], disabled: ['отключен', 'off'] };
@@ -135,7 +137,39 @@ async function act(id, action, extra = {}) {
   try { const d = await api(`/api/incidents/${id}/${action}`, { method: 'POST', body: JSON.stringify({ actor: actor(), ...extra }) }); incidents[d.id] = d; renderIncidents(); refreshStats(); }
   catch (e) { alert('Ошибка: ' + e.message); }
 }
-async function reloadIncident(id) { const all = await api('/api/incidents?status=all&limit=100'); incidents = Object.fromEntries(all.map(i => [i.id, i])); renderIncidents(); }
+let incSeen = null; // предыдущее состояние инцидентов — чтобы звучать только на изменения
+async function reloadIncident(id) {
+  const all = await api('/api/incidents?status=all&limit=100'); incidents = Object.fromEntries(all.map(i => [i.id, i])); renderIncidents();
+  if (incSeen) soundForIncidents(incSeen);
+  incSeen = Object.fromEntries(all.map(i => [i.id, { status: i.status, level: i.level, escalated: i.escalated }]));
+}
+// ---- звук пульта ----
+const SND = window.TGSound;
+if (SND) SND.bindButton($('btnSound')); else $('btnSound').style.display = 'none';
+function say(text) { // голос браузера (ru-RU), без файлов
+  if (!SND || !SND.isOn() || !window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'ru-RU'; u.rate = 1.05;
+  const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith('ru')); if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+function soundForIncidents(prev) {
+  for (const i of Object.values(incidents)) {
+    const p = prev[i.id], zn = zones[i.zone_id] || '';
+    if (!p && i.status !== 'closed') {
+      if (i.level === 'fire') { SND?.play('uiAlarm'); say(`Пожар. ${zn}.`); }
+      else if (i.level === 'gas') { SND?.play('uiAlarm'); say(`Утечка газа. ${zn}.`); }
+      else if (i.level === 'forecast') { SND?.play('uiForecast'); say(`Прогноз: риск возгорания. ${zn}.`); }
+      else if (i.level === 'attention') { SND?.play('uiAttention'); say(`Внимание. ${zn}.`); }
+      else { SND?.play('uiOffline'); if (i.kind === 'offline') say(`Нет связи с датчиком. ${zn}.`); }
+    } else if (p) {
+      if (p.level !== i.level && i.level === 'fire' && i.status !== 'closed') { SND?.play('uiAlarm'); say(`Пожар подтверждён. ${zn}.`); }
+      if (!p.escalated && i.escalated) { SND?.play('uiEscalation'); say('Автоэскалация. Включены сирены.'); }
+      if (p.status !== 'closed' && i.status === 'closed') SND?.play('uiResolved');
+    }
+  }
+}
+// пока пожар или газ не приняты оператором — тревожный сигнал повторяется
+setInterval(() => { if (Object.values(incidents).some(i => i.status === 'new' && (i.level === 'fire' || i.level === 'gas'))) SND?.play('uiAlarm'); }, 4000);
 function addEvent(e) {
   const txt = { alarm: 'ТРЕВОГА', pre_alarm: 'внимание', restore: 'норма', offline: 'НЕТ СВЯЗИ', link_restored: 'связь восстановлена', fault: 'неисправность', sim_connected: 'симулятор подключился' }[e.event] || e.event;
   const c = { alarm: '#fca5a5', pre_alarm: '#fde047', offline: '#cbd5e1', link_restored: '#86efac', restore: '#86efac' }[e.event] || 'inherit';

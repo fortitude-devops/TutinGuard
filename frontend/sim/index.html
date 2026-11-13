@@ -45,6 +45,7 @@
   #loading{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;color:var(--mut);background:var(--bg)}
   @media (max-width:900px){#right{display:none}#legend{display:none}#left{width:250px}}
 </style>
+<script src="./sound.js"></script>
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
 </script>
@@ -62,6 +63,7 @@
     <div class="grid2">
       <button id="btnEvac">Эвакуация</button><button id="btnReset">Сброс</button>
       <button id="btnWalls">Низкие стены</button><button id="btnTop">Вид сверху</button>
+      <button id="btnSound" style="grid-column:span 2">🔇 Звук</button>
     </div>
     <label class="chk"><input type="checkbox" id="chkAlerts" checked> Оповещение (сирены) работает</label>
     <div class="row">Скорость времени
@@ -96,6 +98,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const PI = Math.PI, TAU = PI * 2, V3 = THREE.Vector3;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const SND = window.TGSound; // sound.js (может отсутствовать)
 let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
 // ================= Renderer, scene, camera =================
@@ -831,6 +834,7 @@ const UNITS = { multi: 'дБ/м', smoke: 'дБ/м', heat: '°C', gas_lel: '% Н�
 function setSensorState(s, st, why) {
   if (s.state === st) return;
   const prev = s.state; s.state = st;
+  if (prev !== '_') { if (st === 'alarm') SND?.play('detector', att(s.x, s.y, s.z)); else if (st === 'pre_alarm') SND?.play('chirp', att(s.x, s.y, s.z)); }
   const c = STATE_COL[st]; s.ledMat.color.setHex(c); s.halo.material.color.setHex(c);
   s.halo.scale.setScalar(st === 'alarm' ? .55 : st === 'pre_alarm' ? .4 : .28);
   const zn = ZMAP[s.zone]?.name || '';
@@ -869,6 +873,7 @@ function toggleHazard(h) {
 }
 function startEvac(reason) {
   if (evacuating) return; evacuating = true;
+  SND?.play('door', .6);
   log(`Эвакуация: ${reason}`, 'e-alarm');
   for (const d of doorLeaves) if (d.isExit) d.target = (d.pivot.position.z < 1 ? 1 : -1) * 1.6;
   PEOPLE.forEach(P => { if (P.state === 'sit' && P.alertAt === null) P.alertAt = simT + 2 + rnd() * 6; });
@@ -963,6 +968,35 @@ function simStep(dt) {
   });
 }
 
+// ================= Sound =================
+// громкость источника по расстоянию до камеры: рядом — 1, через весь офис — ~0,2
+function att(x, y, z) { return clamp(4 / (camera.position.distanceTo(new V3(x, y, z)) + 2), .15, 1); }
+let audioAcc = 0;
+function audioTick(rdt) {
+  if (!SND || !SND.isOn()) return;
+  audioAcc += rdt; if (audioAcc < .1) return; const step = audioAcc; audioAcc = 0;
+  let fire = 0, smoul = 0, gas = 0;
+  for (const h of HAZ) {
+    if (!h.active) continue;
+    const st = h.stages[h.stage], a = att(...h.pos);
+    if (st.fire) fire = Math.max(fire, clamp(h.t / 40, .35, 1.2) * st.fire * a);
+    else if (h.gas) gas = Math.max(gas, clamp(ZMAP[h.zone].lel / 15, .2, 1) * a);
+    else if ((st.smoke || 0) >= .001 || (st.ramp && h.t / st.dur > .6)) smoul = Math.max(smoul, a * (st.ramp ? clamp((h.t / st.dur - .6) / .4, 0, 1) : 1));
+    if ((st.label === 'искрение' || st.label === 'тепловой разгон') && Math.random() < step * 1.3) SND.play('spark', a);
+  }
+  const walking = PEOPLE.filter(P => P.state === 'walk').length;
+  SND.setLoop('ambience', .6);
+  SND.setLoop('siren', sirenOn ? 1 : 0);
+  SND.setLoop('crackle', fire);
+  SND.setLoop('smoulder', smoul);
+  SND.setLoop('gas', gas);
+  SND.setLoop('footsteps', clamp(walking / 4, 0, 1) * .8);
+  // речевое оповещение СОУЭ: идёт по кругу, пока звучат сирены
+  const want = sirenOn && evacuating ? (statusText.startsWith('ГАЗ') ? 'gas' : 'evac') : null, cur = SND.voiceKind();
+  if (want && cur !== want && cur !== 'test') SND.voice(want, { repeat: true, pause: 4 });
+  if (!want && (cur === 'evac' || cur === 'gas')) SND.stopVoice();
+}
+
 // ================= UI wiring =================
 const hzEl = document.getElementById('hazards');
 function renderHazButtons() {
@@ -974,7 +1008,8 @@ function renderHazButtons() {
   }
 }
 renderHazButtons();
-document.getElementById('btnEvac').onclick = () => startEvac('запущена вручную');
+document.getElementById('btnEvac').onclick = () => { if (alertsOn) { sirenOn = true; sirenSilenced = false; } startEvac('запущена вручную'); };
+if (SND) SND.bindButton(document.getElementById('btnSound')); else document.getElementById('btnSound').style.display = 'none';
 document.getElementById('btnReset').onclick = resetAll;
 document.getElementById('selSpeed').onchange = (e) => speed = +e.target.value;
 document.getElementById('chkAlerts').onchange = (e) => { alertsOn = e.target.checked; log(alertsOn ? 'Оповещение включено' : 'Оповещение ОТКЛЮЧЕНО — люди узнают о пожаре сами', alertsOn ? 'e-ok' : 'e-pre'); };
@@ -987,6 +1022,8 @@ function resetAll() {
   // new session: jump the simulation clock forward so the AI history of the previous run is not mixed in
   if (simT > 0) simEpoch += simT * 1000 + 6 * 3600e3;
   window.__tgHello?.();
+  const wasAlarm = sirenOn || statusLevel >= 3;
+  SND?.stopVoice(); if (wasAlarm) SND?.voice('allclear');
   simT = 0; evacuating = false; sirenOn = false; sirenSilenced = false; statusLevel = -1; resetZones();
   for (const h of HAZ) { h.active = false; h.stage = 0; h.t = 0; h.fire.visible = false; }
   for (const s of SENSORS) { s.offline = false; s.pressed = false; s.ror = 0; s.prevT = AMB; s.state = '_'; setSensorState(s, 'normal'); }
@@ -1105,6 +1142,7 @@ renderer.setAnimationLoop(() => {
     }
     if (h.glow) for (const m of h.glow) m.emissiveIntensity = on ? (st.fire ? 1.4 : st.ramp ? .35 * Math.min(h.t / st.dur, 1) : .5 + Math.sin(t * 6) * .3) : (m === M.microWin ? .15 : 0);
   }
+  audioTick(rdt);
   // sirens
   blink += rdt; const sOn = sirenOn && (Math.floor(blink * 2.5) % 2 === 0);
   sirenMat.emissiveIntensity = sOn ? 3 : 0; sirenLights.forEach(h => h.scale.setScalar(sOn ? .9 : .01));
@@ -1211,11 +1249,11 @@ function onCommand(m) {
   let ok = true;
   switch (m.action) {
     case 'siren_on': sirenSilenced = false; sirenOn = true; log(`Команда (${by}): включить сирены`, 'e-alarm'); startEvac(`сирены включил ${by}`); break;
-    case 'siren_off': sirenOn = false; sirenSilenced = true; log(`Команда (${by}): выключить сирены`, 'e-info'); break;
+    case 'siren_off': sirenOn = false; sirenSilenced = true; SND?.stopVoice(); log(`Команда (${by}): выключить сирены`, 'e-info'); break;
     case 'evacuation_on': sirenSilenced = false; sirenOn = true; startEvac(`команда: ${by}`); break;
-    case 'unlock_exits': for (const d of doorLeaves) if (d.isExit) d.target = (d.pivot.position.z < 1 ? 1 : -1) * 1.6; log(`Команда (${by}): выходы разблокированы`, 'e-info'); break;
+    case 'unlock_exits': SND?.play('door', .7); for (const d of doorLeaves) if (d.isExit) d.target = (d.pivot.position.z < 1 ? 1 : -1) * 1.6; log(`Команда (${by}): выходы разблокированы`, 'e-info'); break;
     case 'reset_device': { const s = SENSORS.find(q => q.id === m.device_id); if (s) { s.pressed = false; s.state = 'alarm'; s.state = '_'; setSensorState(s, 'normal'); log(`Команда: сброс ${s.id}`, 'e-info'); } else ok = false; break; }
-    case 'run_test': log('Команда: тест оповещения', 'e-info'); sirenOn = true; setTimeout(() => { if (!evacuating) sirenOn = false; }, 3000); break;
+    case 'run_test': log('Команда: тест оповещения', 'e-info'); SND?.voice('test'); sirenOn = true; setTimeout(() => { if (!evacuating) sirenOn = false; }, 3000); break;
     case 'reset_all': resetAll(); break;
     default: ok = false;
   }

@@ -2,6 +2,3 @@
 __pycache__/
 *.pyc
 *.db
-.DS_Store
-backend/models/
-.venv/
