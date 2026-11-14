@@ -23,7 +23,8 @@ from .db import SessionLocal, utcnow
 TOKEN_TTL_HOURS = int(os.getenv("TOKEN_TTL_HOURS", "72"))
 DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "demo")
 
-ROLE_RU = {"operator": "Дежурный оператор", "responsible": "Ответственный сотрудник", "technician": "Техник", "admin": "Администратор"}
+ROLE_RU = {"operator": "Дежурный оператор", "responsible": "Ответственный сотрудник", "technician": "Техник", "admin": "Администратор",
+           "dispatcher": "Диспетчер ЦОУ (город)"}
 
 INCIDENT_ROLES = ("operator", "responsible", "admin")
 REGISTRY_ROLES = ("responsible", "admin")
@@ -117,6 +118,7 @@ DEMO_USERS = [
     ("operator", "Айдана Серікқызы", "operator", "+7 700 000 00 01"),
     ("responsible", "Марат Жумабеков", "responsible", "+7 700 000 00 02"),
     ("technician", "Саят Оспанов", "technician", "+7 700 000 00 03"),
+    ("dispatcher", "Ержан Абдуллаев", "dispatcher", "+7 700 000 00 04"),
     ("admin", "Администратор системы", "admin", ""),
 ]
 

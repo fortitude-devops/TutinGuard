@@ -40,6 +40,11 @@ class Site(Base):
     floors: Mapped[int] = mapped_column(Integer, default=1)
     responsible_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(TS, nullable=True, default=utcnow)
+    city: Mapped[str] = mapped_column(String(60), default="")
+    district: Mapped[str] = mapped_column(String(80), default="")
+    lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lon: Mapped[float | None] = mapped_column(Float, nullable=True)
+    passport: Mapped[dict | None] = mapped_column(JSON, nullable=True)   # pre-incident plan: entrances, hydrants, shut-offs, hazards
 
 
 class Zone(Base):
@@ -228,13 +233,62 @@ class Forecast(Base):
     lead_min: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+class FireStation(Base):
+    """Fire stations (demo): used to estimate travel distance and to group response times."""
+    __tablename__ = "fire_stations"
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    city: Mapped[str] = mapped_column(String(60), default="")
+    lat: Mapped[float] = mapped_column(Float)
+    lon: Mapped[float] = mapped_column(Float)
+
+
+class FireRecord(Base):
+    """One fire for the city registry and the fire protocol: timeline, cause, consequences."""
+    __tablename__ = "fire_records"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    city: Mapped[str] = mapped_column(String(60), index=True, default="")
+    district: Mapped[str] = mapped_column(String(80), index=True, default="")
+    site_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)   # connected TutinGuard object
+    incident_id: Mapped[int | None] = mapped_column(Integer, index=True, nullable=True)
+    object_name: Mapped[str] = mapped_column(String(200), default="")
+    object_kind: Mapped[str] = mapped_column(String(40), index=True, default="residential")
+    address: Mapped[str] = mapped_column(String(300), default="")
+    lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lon: Mapped[float | None] = mapped_column(Float, nullable=True)
+    room: Mapped[str] = mapped_column(String(120), default="")
+    cause: Mapped[str] = mapped_column(String(40), index=True, default="unknown")
+    source: Mapped[str] = mapped_column(String(200), default="")
+    detection: Mapped[str] = mapped_column(String(20), default="call")    # auto (TutinGuard) | call | patrol
+    ignition_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    detected_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    call_at: Mapped[datetime] = mapped_column(TS, index=True)
+    dispatched_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    arrived_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    localized_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    extinguished_at: Mapped[datetime | None] = mapped_column(TS, nullable=True)
+    station_id: Mapped[str] = mapped_column(String(20), default="")
+    units: Mapped[int] = mapped_column(Integer, default=1)
+    area_m2: Mapped[float] = mapped_column(Float, default=0)
+    evacuated: Mapped[int] = mapped_column(Integer, default=0)
+    rescued: Mapped[int] = mapped_column(Integer, default=0)
+    injured: Mapped[int] = mapped_column(Integer, default=0)
+    deaths: Mapped[int] = mapped_column(Integer, default=0)
+    damage_kzt: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(20), default="closed")      # active | closed
+    demo: Mapped[bool] = mapped_column(Boolean, default=True)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    protocol_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 def ensure_columns() -> None:
     """Tiny forward-only migration: add columns introduced after the first release to existing tables."""
     from sqlalchemy import inspect, text
     insp = inspect(engine)
     T, S40, I, B = "TIMESTAMP WITH TIME ZONE", "VARCHAR(40)", "INTEGER", "BOOLEAN"
     wanted = {"sites": [("session_started_at", T), ("session_id", S40), ("kind", S40 + " DEFAULT 'office'"),
-                        ("floors", I + " DEFAULT 1"), ("responsible_id", I), ("created_at", T)],
+                        ("floors", I + " DEFAULT 1"), ("responsible_id", I), ("created_at", T),
+                        ("city", "VARCHAR(60) DEFAULT ''"), ("district", "VARCHAR(80) DEFAULT ''"), ("lat", "FLOAT"), ("lon", "FLOAT"), ("passport", "JSON")],
               "readings": [("vts", T)],
               "incidents": [("brigade_status", "VARCHAR(20)"), ("brigade_called_at", T), ("brigade_arrived_at", T),
                             ("brigade_done_at", T), ("brigade_eta_s", I), ("brigade_travel_s", I)],

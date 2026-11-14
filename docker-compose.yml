@@ -31,11 +31,19 @@ services:
       ESCALATE_SECONDS: ${ESCALATE_SECONDS:-60}
       READINGS_KEEP_HOURS: ${READINGS_KEEP_HOURS:-24}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
-      AUTO_DISPATCH: ${AUTO_DISPATCH:-escalation}
+      AUTO_DISPATCH: ${AUTO_DISPATCH:-confirmed}
       BRIGADE_ETA_S: ${BRIGADE_ETA_S:-45}
+      OLLAMA_URL: ${OLLAMA_URL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TILE_DIR: /app/tiles
+      WARMUP_S: ${WARMUP_S:-120}
+      REQUERY_S: ${REQUERY_S:-60}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # lets the backend reach Ollama on the host machine
     volumes:
       - ./frontend:/app/frontend:ro
+      - ./tiles:/app/tiles          # offline map cache: docker compose exec backend python -m app.tiles
     ports:
       # 127.0.0.1 = only this machine. On a server without Caddy set BACKEND_BIND=0.0.0.0
       - "${BACKEND_BIND:-127.0.0.1}:${HTTP_PORT:-8000}:8000"

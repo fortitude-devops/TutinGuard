@@ -5,46 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TutinGuard — 3D-офис (демо)</title>
 <style>
-  :root{--bg:#14181c;--card:rgba(20,24,29,.86);--line:rgba(255,255,255,.09);--tx:#e8ecef;--mut:#9aa5ae;--ok:#22c55e;--warn:#facc15;--bad:#ef4444;--acc:#2dd4bf}
+  @font-face{font-family:'Onest';font-weight:100 900;font-display:swap;src:url(./fonts/onest-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:'Onest';font-weight:100 900;font-display:swap;src:url(./fonts/onest-cyrillic-wght-normal.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  @font-face{font-family:'Onest';font-weight:100 900;font-display:swap;src:url(./fonts/onest-cyrillic-ext-wght-normal.woff2) format('woff2');unicode-range:U+0460-052F,U+1C80-1C88,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+  :root,[data-theme=dark]{--bg:#0b0b0c;--card:rgba(20,20,22,.88);--card2:#1b1b1e;--card3:#232327;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.13);--tx:#f4f4f5;--mut:#a1a1aa;--ok:#3dd68c;--warn:#ffb224;--bad:#f23a3a;--acc:#ff5b1f;--info:#6b9bff;--shadow:0 12px 32px rgba(0,0,0,.35)}
+  [data-theme=light]{--bg:#f2f2f4;--card:rgba(255,255,255,.92);--card2:#f6f6f8;--card3:#ececf0;--line:rgba(12,12,20,.08);--line2:rgba(12,12,20,.14);--tx:#0e0e10;--mut:#55555f;--ok:#0f7a4a;--warn:#a35f00;--bad:#d42020;--acc:#e2470c;--info:#2554d9;--shadow:0 8px 24px rgba(16,16,24,.08)}
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.45 'Onest',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1}
   canvas{display:block}
+  svg.ic{flex:none;vertical-align:-3px}
   #hud{position:fixed;inset:0;pointer-events:none}
-  .card{pointer-events:auto;position:absolute;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;backdrop-filter:blur(6px);max-height:calc(100% - 24px);overflow:auto}
-  #left{left:12px;top:12px;width:290px}
-  #right{right:12px;top:12px;width:330px}
-  h4{margin:12px 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);font-weight:600}
-  .brand{font-size:18px;font-weight:700;letter-spacing:.02em}
-  .brand span{font-size:12px;font-weight:500;color:var(--mut);margin-left:6px}
-  .muted{color:var(--mut)} .small{font-size:11.5px}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
-  #clock{font:600 15px ui-monospace,Menlo,monospace}
-  .pill{padding:2px 9px;border-radius:999px;font-weight:600;font-size:12px}
-  .pill.ok{background:rgba(34,197,94,.15);color:#4ade80}.pill.warn{background:rgba(250,204,21,.15);color:#fde047}.pill.bad{background:rgba(239,68,68,.2);color:#fca5a5;animation:blink 1s infinite}
+  .card{pointer-events:auto;position:absolute;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;backdrop-filter:blur(10px);max-height:calc(100% - 24px);overflow:auto;box-shadow:var(--shadow)}
+  #left{left:12px;top:12px;width:300px}
+  #right{right:12px;top:12px;width:340px}
+  h4{margin:14px 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+  .brand{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:650;letter-spacing:.04em}
+  .brand .g{color:var(--bad)} .brand small{display:block;font-size:11px;font-weight:500;letter-spacing:.01em;color:var(--mut)}
+  .muted{color:var(--mut)} .small{font-size:12px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+  #clock{font:600 16px ui-monospace,'JetBrains Mono',Menlo,monospace}
+  .pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;font-weight:600;font-size:12px;white-space:nowrap}
+  .pill.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}.pill.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}.pill.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad);animation:blink 1s infinite}
   @keyframes blink{50%{opacity:.55}}
-  button,select{font:inherit;color:var(--tx);background:#232a31;border:1px solid var(--line);border-radius:8px;padding:6px 9px;cursor:pointer}
-  button:hover{background:#2c353e} button.on{border-color:var(--acc);color:var(--acc)}
-  .hz{display:flex;width:100%;text-align:left;gap:8px;align-items:flex-start;margin-bottom:5px}
-  .hz b{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:50%;background:#c62828;color:#fff;font-size:11px}
-  .hz small{display:block;color:var(--mut)}
-  .hz.active{border-color:#ef4444;background:rgba(239,68,68,.12)}
+  button,select{font:inherit;color:var(--tx);background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:6px 10px;min-height:34px;cursor:pointer;line-height:1.2;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:550}
+  select{appearance:auto;font-weight:500}
+  button:hover{background:var(--card3)} button.on{border-color:var(--acc);color:var(--acc)}
+  button.danger{background:var(--bad);border-color:var(--bad);color:#fff} button.danger:hover{filter:brightness(1.08)}
+  .seg{display:inline-flex;padding:3px;gap:2px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
+  .seg button{height:28px;border:0;background:transparent;color:var(--mut);padding:0 9px;border-radius:9px}
+  .seg button.on{background:var(--card3);color:var(--tx)}
+  .hz{display:flex;width:100%;height:auto;text-align:left;gap:10px;align-items:flex-start;justify-content:flex-start;margin-bottom:6px;padding:8px 10px;border-radius:12px;font-weight:500}
+  .hz b{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:7px;background:var(--bad);color:#fff;font-size:11.5px;font-weight:700}
+  .hz small{display:block;color:var(--mut);font-weight:400}
+  .hz.active{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .chk{display:flex;gap:6px;align-items:center;margin-top:8px}
+  .chk{display:flex;gap:7px;align-items:center;margin-top:10px} .chk input{accent-color:var(--acc)}
   table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-  td,th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:right;font-size:12px}
+  td,th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right;font-size:12px}
   th{color:var(--mut);font-weight:500} td:first-child,th:first-child{text-align:left}
-  td.w{color:var(--warn)} td.b{color:#fca5a5;font-weight:600}
+  td.w{color:var(--warn)} td.b{color:var(--bad);font-weight:650}
   #log{max-height:190px;overflow:auto;font-size:12px}
-  #log div{padding:3px 0;border-bottom:1px solid var(--line)}
-  #log .t{color:var(--mut);font-family:ui-monospace,Menlo,monospace;margin-right:6px}
-  .e-alarm{color:#fca5a5}.e-pre{color:#fde047}.e-info{color:#93c5fd}.e-ok{color:#86efac}.e-off{color:#c4b5fd}
-  #people{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:12px}
+  #log div{padding:4px 0;border-bottom:1px solid var(--line)}
+  #log .t{color:var(--mut);font-family:ui-monospace,'JetBrains Mono',Menlo,monospace;margin-right:6px}
+  .e-alarm{color:var(--bad)}.e-pre{color:var(--warn)}.e-info{color:var(--info)}.e-ok{color:var(--ok)}.e-off{color:#a78bfa}
+  #people{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:12px}
+  #people span{display:inline-flex;align-items:center;gap:4px}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
-  #legend{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;pointer-events:auto;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;display:flex;gap:14px;font-size:12px;white-space:nowrap}
-  #tip{position:absolute;pointer-events:none;background:rgba(10,12,15,.92);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;display:none;max-width:260px;white-space:pre-line}
+  #legend{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;pointer-events:auto;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 16px;display:flex;gap:16px;font-size:12px;white-space:nowrap;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+  #tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:12px;display:none;max-width:260px;white-space:pre-line;box-shadow:var(--shadow)}
   #loading{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;color:var(--mut);background:var(--bg)}
-  @media (max-width:900px){#right{display:none}#legend{display:none}#left{width:250px}}
+  a.btnlink{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;color:var(--acc);text-decoration:none;font-weight:550;font-size:12.5px}
+  @media (max-width:900px){#right{display:none}#legend{display:none}#left{width:260px}}
 </style>
+<script src="./ui.js"></script>
 <script src="./sound.js"></script>
 <script type="importmap">
 {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
@@ -53,43 +66,47 @@
 <body>
 <div id="hud">
   <div class="card" id="left">
-    <div class="brand">TutinGuard<span>3D-офис · демо</span></div>
-    <div class="muted small">Симуляция. Все данные тестовые.</div>
+    <div class="row" style="margin-top:0"><div class="brand"><span id="logo"></span><span>TUTIN<span class="g">GUARD</span><small id="brandSub">3D-офис · демо</small></span></div>
+      <a class="btnlink" href="/app/" target="_blank" rel="noopener" data-icon="grid"><span data-i18n="Пульт">Пульт</span></a></div>
+    <div class="row small"><span class="muted" data-i18n>Объект</span><select id="selScene" style="max-width:180px"></select></div>
+    <div class="row small"><div class="seg" id="segTheme" role="group" aria-label="Тема"><button type="button" data-th="dark" aria-label="dark"></button><button type="button" data-th="light" aria-label="light"></button></div>
+      <select id="selLang" aria-label="Язык" style="height:32px"><option value="ru">Рус</option><option value="kk">Қаз</option><option value="en">Eng</option></select></div>
+    <div class="muted small" style="margin-top:8px" data-i18n>Симуляция. Все данные тестовые.</div>
     <div class="row"><span id="clock">00:00</span><span id="status" class="pill ok">Норма</span></div>
-    <div class="row small"><span class="muted">Сервер TutinGuard</span><span id="link" class="pill warn" title="">подключение…</span></div>
-    <div class="row small" style="display:none"><span class="muted">Пожарные (DEMO)</span><span id="brigade" class="pill warn">—</span></div>
-    <h4>Источники опасности</h4>
+    <div class="row small"><span class="muted" data-i18n>Сервер TutinGuard</span><span id="link" class="pill warn" title="">подключение…</span></div>
+    <div class="row small" style="display:none"><span class="muted" data-i18n>Пожарные (DEMO)</span><span id="brigade" class="pill warn">—</span></div>
+    <h4 data-i18n>Источники опасности</h4>
     <div id="hazards"></div>
-    <h4>Управление</h4>
+    <h4 data-i18n>Управление</h4>
     <div class="grid2">
-      <button id="btnEvac">Эвакуация</button><button id="btnReset">Сброс</button>
-      <button id="btnWalls">Низкие стены</button><button id="btnTop">Вид сверху</button>
-      <button id="btnFire" style="grid-column:span 2">🚒 Вызвать пожарных (DEMO)</button>
-      <button id="btnSound" style="grid-column:span 2">🔇 Звук</button>
+      <button id="btnEvac" data-icon="users"><span data-i18n>Эвакуация</span></button><button id="btnReset" data-icon="reset"><span data-i18n>Сброс</span></button>
+      <button id="btnWalls" data-icon="walls"><span data-i18n>Низкие стены</span></button><button id="btnTop" data-icon="top"><span data-i18n>Вид сверху</span></button>
+      <button id="btnFire" class="danger" style="grid-column:span 2" data-icon="truck"><span data-i18n>Вызвать пожарных (DEMO)</span></button>
+      <button id="btnSound" style="grid-column:span 2">Звук</button>
     </div>
-    <label class="chk"><input type="checkbox" id="chkAlerts" checked> Оповещение (сирены) работает</label>
-    <div class="row">Скорость времени
+    <label class="chk"><input type="checkbox" id="chkAlerts" checked> <span data-i18n>Оповещение (сирены) работает</span></label>
+    <div class="row"><span data-i18n>Скорость времени</span>
       <select id="selSpeed"><option value="1">×1</option><option value="2">×2</option><option value="5" selected>×5</option><option value="10">×10</option><option value="60">×60 (1 с = 1 мин)</option></select>
     </div>
-    <p class="muted small" style="margin:10px 0 0">Клик по комнате — приблизить. Клик по красной цифре — запустить источник. Клик по датчику — оборвать или вернуть связь. Колесо мыши — зум.</p>
+    <p class="muted small" style="margin:10px 0 0" data-i18n>Клик по комнате — приблизить. Клик по красной цифре — запустить источник. Клик по датчику — оборвать или вернуть связь. Колесо мыши — зум.</p>
   </div>
   <div class="card" id="right">
-    <h4 style="margin-top:0">Показания по зонам</h4>
+    <h4 style="margin-top:0" data-i18n>Показания по зонам</h4>
     <table id="ztab"></table>
-    <h4>Журнал событий</h4>
+    <h4 data-i18n>Журнал событий</h4>
     <div id="log"></div>
-    <h4>Люди (FED — доза дыма и тепла)</h4>
+    <h4 data-i18n>Люди (FED — доза дыма и тепла)</h4>
     <div id="people"></div>
   </div>
   <div id="legend">
-    <span><span class="dot" style="background:#22c55e"></span>норма</span>
-    <span><span class="dot" style="background:#facc15"></span>внимание</span>
-    <span><span class="dot" style="background:#ef4444"></span>тревога</span>
-    <span><span class="dot" style="background:#6b7280"></span>нет связи</span>
-    <span><span class="dot" style="background:#c62828;border-radius:3px"></span>источник опасности</span>
+    <span><span class="dot" style="background:var(--ok)"></span><span data-i18n>норма</span></span>
+    <span><span class="dot" style="background:var(--warn)"></span><span data-i18n>внимание</span></span>
+    <span><span class="dot" style="background:var(--bad)"></span><span data-i18n>тревога</span></span>
+    <span><span class="dot" style="background:#6b7280"></span><span data-i18n>нет связи</span></span>
+    <span><span class="dot" style="background:#c62828;border-radius:3px"></span><span data-i18n>источник опасности</span></span>
   </div>
   <div id="tip"></div>
-  <div id="loading">Загрузка сцены…</div>
+  <div id="loading" data-i18n>Загрузка сцены…</div>
 </div>
 
 <script type="module">
@@ -97,10 +114,15 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { SCENES, SCENE_LIST } from './scenes.js';
 
 const PI = Math.PI, TAU = PI * 2, V3 = THREE.Vector3;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const SND = window.TGSound; // sound.js (может отсутствовать)
+// which building: ?scene=office|school|hospital|mall|dorm
+const SCENE_ID = (new URLSearchParams(location.search).get('scene') || 'office').toLowerCase();
+const SCN = SCENE_ID !== 'office' ? SCENES[SCENE_ID] || null : null;
+const SITE_ID = SCN ? SCN.site_id : 'office-01', SITE_NAME = SCN ? SCN.name : 'Офис IT-компании (демо)';
 let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
 // ================= Renderer, scene, camera =================
@@ -116,8 +138,10 @@ document.body.prepend(renderer.domElement); window.__three = { renderer, scene: 
 const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
 const scene = new THREE.Scene(); window.__three.scene = scene;
-scene.background = new THREE.Color(0x1a1f24);
-scene.fog = new THREE.Fog(0x1a1f24, 40, 80);
+const SKY = { dark: 0x15171a, light: 0xdfe3e8 };
+scene.background = new THREE.Color(SKY[TGUI.theme]);
+scene.fog = new THREE.Fog(SKY[TGUI.theme], 40, 80);
+addEventListener('tg-theme', (e) => { scene.background.setHex(SKY[e.detail]); scene.fog.color.setHex(SKY[e.detail]); });
 
 const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.15, 220);
 camera.position.set(19, 17, 21);
@@ -298,6 +322,8 @@ class Particles {
   }
 }
 
+TEX.linoleum = ctex(256, 256, (g, w, h) => { g.fillStyle = '#b9c4c9'; g.fillRect(0, 0, w, h); for (let i = 0; i < 1800; i++) { g.fillStyle = `rgba(${rnd() < .5 ? '255,255,255' : '60,70,80'},${rnd() * .12})`; g.fillRect(rnd() * w, rnd() * h, 2 + rnd() * 5, 1 + rnd() * 2); } g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, 0, w, 1); g.fillRect(0, 0, 1, h); });
+TEX.marble = ctex(256, 256, (g, w, h) => { g.fillStyle = '#e7e3dc'; g.fillRect(0, 0, w, h); for (let i = 0; i < 40; i++) { g.strokeStyle = `rgba(120,115,110,${.05 + rnd() * .1})`; g.lineWidth = .5 + rnd(); g.beginPath(); let x = rnd() * w, y = rnd() * h; g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (rnd() - .5) * 60; y += (rnd() - .5) * 60; g.lineTo(x, y); } g.stroke(); } g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(0, 0, w, 2); g.fillRect(0, 0, 2, h); noise(g, w, h, 2000, .04); });
 // ================= Materials =================
 const std = (o) => new THREE.MeshStandardMaterial({ roughness: .7, ...o });
 const M = {
@@ -390,7 +416,7 @@ function mergeGroup(root) {
 // ================= Layout =================
 const WALL_H_FULL = 2.9, WALL_H_LOW = 1.15;
 let wallH = WALL_H_FULL;
-const ZONES = [
+const ZONES = SCN ? SCN.zones : [
   { id: 'os', name: 'Опенспейс', x0: 0, z0: 0, x1: 9, z1: 6.5, floor: 'carpet', tile: 1 },
   { id: 'meet', name: 'Переговорная', x0: 9, z0: 0, x1: 14, z1: 4.5, floor: 'parquet', tile: 2 },
   { id: 'dir', name: 'Кабинет директора', x0: 9, z0: 4.5, x1: 14, z1: 7.5, floor: 'parquet', tile: 2 },
@@ -447,7 +473,7 @@ for (const z of ZONES) {
 
 // ---------- Walls ----------
 // opening: [from, to, bottom, top, type]
-const WALLS = [
+const WALLS = SCN ? SCN.walls : [
   { axis: 'x', c: 0, a0: -0.1, a1: 14.1, t: .2, ops: [[1.5, 2.5, 0, 2.15, 'exit', 1], [3.3, 4.8, .9, 2.3, 'win'], [5.8, 7.3, .9, 2.3, 'win'], [10.5, 12.8, .9, 2.3, 'win']] },
   { axis: 'x', c: 10, a0: -0.1, a1: 14.1, t: .2, ops: [[5.75, 6.75, 0, 2.2, 'exit', -1]] },
   { axis: 'z', c: 0, a0: .1, a1: 9.9, t: .2, ops: [[3.2, 4.8, .9, 2.3, 'win'], [7.4, 8.9, .9, 2.3, 'win']] },
@@ -501,7 +527,7 @@ function buildWalls() {
         if (top < H) { if (glass) { P(s, e, top, H - .05); P(s, e, H - .05, H, M.alu, W.t + .02); } else { P(s, e, top, H); P(s, e, H, H + .012, M.cap, W.t + .024); } }
         P(s - .05, s + .004, 0, ht, glass ? M.alu : M.white, W.t + .03); P(e - .004, e + .05, 0, ht, glass ? M.alu : M.white, W.t + .03);
         if (top < H) P(s - .05, e + .05, top, top + .06, glass ? M.alu : M.white, W.t + .03);
-        if (H > 2) {
+        if (H > 2 && type !== 'arch') {
           const isExit = type === 'exit', len = e - s - .04;
           const pivot = new THREE.Group(); pivot.position.set(ax ? s + .02 : W.c, 0, ax ? W.c : s + .02);
           const leafMat = glass ? M.glass : isExit ? M.darkMetal : M.wood;
@@ -573,8 +599,20 @@ function sofa(x, z, rot, mat) {
   for (const s of [-1, 1]) for (const t of [-1, 1]) cyl(.025, .02, .1, M.black, s * .62, .05, t * .3, g, 8);
 }
 
-// ---------- Openspace ----------
 const SEATS = []; // where mannequins sit
+const NAV_BLOCKS = []; // furniture footprints for path finding (new buildings)
+let RACK_E = null;
+function sceneKit() {
+  return { THREE, M, TEX, std, rb, cyl, mesh, RB, CYL, S, PI, TAU, V3, rnd, ctex, textCanvas, chair, plant, extinguisher, sofa,
+    seat: (x, z, rot, name, pose = 'sit', o = {}) => SEATS.push({ x, z, rot, name, pose, ...o }),
+    block: (x0, z0, x1, z1) => NAV_BLOCKS.push({ x0, z0, x1, z1 }),
+    ws: (x, zF, rot, o, name, person = true) => { const g = workstation(x, zF, rot, o); g.updateMatrixWorld(true); const p = new V3(0, 0, -.42).applyMatrix4(g.matrixWorld);
+      if (person) SEATS.push({ x: p.x, z: p.z, rot, name }); const a = new V3(-(o.w || 1.4) / 2, 0, 0).applyMatrix4(g.matrixWorld), b = new V3((o.w || 1.4) / 2, 0, o.d || .7).applyMatrix4(g.matrixWorld);
+      NAV_BLOCKS.push({ x0: Math.min(a.x, b.x), z0: Math.min(a.z, b.z), x1: Math.max(a.x, b.x), z1: Math.max(a.z, b.z) }); return g; },
+  };
+}
+if (SCN) SCN.build(sceneKit()); else {
+// ---------- Openspace ----------
 function addWS(x, zF, rot, o, name) {
   const g = workstation(x, zF, rot, o);
   g.updateMatrixWorld(true);
@@ -649,7 +687,7 @@ addWS(12.1, 6.55, PI, { w: 1.6, d: .8, top: M.walnut, scr: 1, cmat: M.leather, t
   sofa(13.45, 5.9, -PI / 2, M.leather);
 }
 // ---------- Server room ----------
-const RACK_E = (() => {
+RACK_E = (() => {
   const leds = []; const draw = (g, w, h, em) => {
     g.fillStyle = em ? '#000' : '#16181b'; g.fillRect(0, 0, w, h);
     let y = 10; let i = 0;
@@ -712,6 +750,7 @@ extinguisher(5.35, 9.75);
 rb(.15, .75, .55, M.hazPanel, 8.86, 1.45, 7.05, .015);
 rb(.02, .1, .1, M.black, 8.78, 1.6, 7.05, .004);
 
+}
 // merge everything static
 const staticMerged = mergeGroup(S); scene.add(staticMerged);
 
@@ -787,7 +826,8 @@ function applyPose(P, a, b = a, t = 0, walk = null) {
   P.ring.position.y = J.hips.position.y + .98;
 }
 const NAMES = ['Айгерим', 'Данияр', 'Мадина', 'Ерлан', 'Алия', 'Тимур', 'Жанна', 'Арман', 'Директор', 'Администратор'];
-const PEOPLE = SEATS.map((s, i) => makePerson(s, s.name || NAMES[i]));
+const PEOPLE = SEATS.map((s, i) => makePerson(s, s.name || (SCN ? SCN.names[i] : NAMES[i]) || 'Человек ' + (i + 1)));
+PEOPLE.forEach(P => { if (P.seat.pose && P.seat.pose !== 'sit') applyPose(P, POSE[P.seat.pose]); });
 
 // evacuation routes (world waypoints, last point is outside)
 const EXIT_E = [[2.0, .6], [2.0, -1.4]], EXIT_M = [[4.7, 9.0], [6.25, 9.4], [6.25, 11.4]];
@@ -807,7 +847,7 @@ const STATE_RU = { normal: 'норма', pre_alarm: 'внимание', alarm: '
 const TYPE_RU = { multi: 'Мультисенсор (дым + t° + CO)', smoke: 'Дымовой', heat: 'Тепловой', gas_lel: 'Газ CH₄', gas_co: 'Угарный газ CO', manual: 'Ручной извещатель', panel: 'Пульт сигнализации' };
 const MODEL = { multi: 'Ajax FireProtect 2 (sim)', smoke: 'ДИП-34А (sim)', heat: 'С2000-ИП (sim)', gas_lel: 'Газоанализатор CH₄ (sim)', gas_co: 'Датчик CO (sim)', manual: 'ИПР 513-3АМ (sim)', panel: 'С2000М + С2000-КДЛ (sim)' };
 const CEIL = 2.86;
-const SENSOR_DEF = [
+const SENSOR_DEF = SCN ? SCN.sensors : [
   ['SMK-OS-01', 'smoke', 4.6, CEIL, .9], ['SMK-OS-02', 'smoke', 7.75, CEIL, .9], ['SMK-OS-03', 'smoke', 1.75, CEIL, 5.4], ['SMK-OS-04', 'smoke', 6.25, CEIL, 5.4],
   ['SMK-MT-01', 'smoke', 10.0, CEIL, 3.75], ['SMK-MT-02', 'smoke', 13.25, CEIL, 3.75],
   ['SMK-DR-01', 'smoke', 10.0, CEIL, 6.6], ['SMK-DR-02', 'smoke', 13.3, CEIL, 5.0],
@@ -841,7 +881,7 @@ for (const [id, type, x, y, z, rot] of SENSOR_DEF) {
 }
 // sirens & exit signs
 const sirenMat = std({ color: 0xb91c1c, emissive: 0xff2020, emissiveIntensity: 0, roughness: .4 });
-const SIRENS = [[4.5, 2.5, .115, 0], [11.5, 2.45, 4.435, PI], [11.5, 2.45, 7.435, PI], [11.5, 2.45, 9.885, PI], [2.5, 2.45, 6.565, 0], [8.2, 2.45, 9.885, PI]];
+const SIRENS = SCN ? SCN.sirens : [[4.5, 2.5, .115, 0], [11.5, 2.45, 4.435, PI], [11.5, 2.45, 7.435, PI], [11.5, 2.45, 9.885, PI], [2.5, 2.45, 6.565, 0], [8.2, 2.45, 9.885, PI]];
 const sirenLights = [];
 for (const [x, y, z, r] of SIRENS) {
   const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = r; D.add(g);
@@ -853,7 +893,7 @@ for (const [x, y, z, r] of SIRENS) {
   g.fillStyle = '#16a34a'; g.fillRect(0, 0, 256, 96); g.fillStyle = '#fff'; g.font = 'bold 46px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ВЫХОД →', 128, 50);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const mat = new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .8 });
-  for (const [x, z, r] of [[2.0, .115, 0], [6.25, 9.885, PI]]) {
+  for (const [x, z, r] of (SCN ? SCN.exitSigns : [[2.0, .115, 0], [6.25, 9.885, PI]])) {
     const g2 = new THREE.Group(); g2.position.set(x, 2.42, z); g2.rotation.y = r; g2.userData.yFull = 2.42; D.add(g2);
     mesh(RB(.4, .16, .04, .01), M.white, 0, 0, .02, g2); mesh(new THREE.PlaneGeometry(.36, .13), mat, 0, 0, .044, g2, false);
     exitSigns.push(g2);
@@ -867,22 +907,22 @@ for (const z of ZONES) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
   sp.scale.set(c.width / c.height * .42, .42, 1); sp.position.set((z.x0 + z.x1) / 2, 3.35, (z.z0 + z.z1) / 2); sp.renderOrder = 10; D.add(sp);
 }
-const HAZ = [
-  { n: 1, name: 'Удлинитель под столами', sub: 'тление проводов → горение', zone: 'os', pos: [2.5, .1, 2.7], glow: [M.hazCable, M.hazStrip],
+const HAZ = SCN ? SCN.hazards(SCN.mats) : [
+  { n: 1, cause: 'electrical', name: 'Удлинитель под столами', sub: 'тление проводов → горение', zone: 'os', pos: [2.5, .1, 2.7], glow: [M.hazCable, M.hazStrip],
     stages: [{ dur: 75, smoke: .0075, heat: .03, co: 6, label: 'тление' }, { smoke: .013, heat: .3, co: 25, fire: 1, label: 'горение' }] },
-  { n: 2, name: 'МФУ в опенспейсе', sub: 'тлеет бумага → горение', zone: 'os', pos: [8.45, 1.05, 5.9], glow: [M.hazPrinter],
+  { n: 2, cause: 'electrical', name: 'МФУ в опенспейсе', sub: 'тлеет бумага → горение', zone: 'os', pos: [8.45, 1.05, 5.9], glow: [M.hazPrinter],
     stages: [{ dur: 90, smoke: .006, heat: .02, co: 5, label: 'тление' }, { smoke: .011, heat: .25, co: 22, fire: .8, label: 'горение' }] },
-  { n: 3, name: 'Серверная стойка / ИБП', sub: 'перегрев → горят аккумуляторы', zone: 'srv', pos: [13.0, 1.0, 9.3], glow: [M.hazUPS],
+  { n: 3, cause: 'battery', name: 'Серверная стойка / ИБП', sub: 'перегрев → горят аккумуляторы', zone: 'srv', pos: [13.0, 1.0, 9.3], glow: [M.hazUPS],
     stages: [{ dur: 70, smoke: .002, heat: .22, co: 2, label: 'перегрев' }, { smoke: .012, heat: .4, co: 22, fire: .9, label: 'горение' }] },
-  { n: 4, name: 'Газовая плита на кухне', sub: 'утечка метана', zone: 'kit', pos: [.75, 1.0, 9.62], gas: true,
+  { n: 4, cause: 'gas', name: 'Газовая плита на кухне', sub: 'утечка метана', zone: 'kit', pos: [.75, 1.0, 9.62], gas: true,
     stages: [{ lel: .12, co: 0, label: 'утечка' }] },
-  { n: 5, name: 'Микроволновка', sub: 'пригорела еда (ложная тревога?)', zone: 'kit', pos: [3.5, 1.15, 6.85], glow: [M.microWin],
+  { n: 5, cause: 'cooking', name: 'Микроволновка', sub: 'пригорела еда (ложная тревога?)', zone: 'kit', pos: [3.5, 1.15, 6.85], glow: [M.microWin],
     stages: [{ dur: 120, smoke: .0013, heat: .02, co: .3, label: 'дым' }, { smoke: 0, heat: 0, co: 0, label: 'погасло', end: 1 }] },
-  { n: 6, name: 'Электрощит в холле', sub: 'короткое замыкание → горение', zone: 'hall', pos: [8.82, 1.45, 7.05], glow: [M.hazPanel],
+  { n: 6, cause: 'electrical', name: 'Электрощит в холле', sub: 'короткое замыкание → горение', zone: 'hall', pos: [8.82, 1.45, 7.05], glow: [M.hazPanel],
     stages: [{ dur: 60, smoke: .004, heat: .05, co: 5, label: 'искрение' }, { smoke: .012, heat: .3, co: 24, fire: .8, label: 'горение' }] },
-  { n: 7, name: 'Розетка обогревателя (часы)', sub: 'медленный перегрев ~2,5 ч → тление → огонь', zone: 'dir', pos: [13.15, .35, 7.2], slow: true,
+  { n: 7, cause: 'heater', name: 'Розетка обогревателя (часы)', sub: 'медленный перегрев ~2,5 ч → тление → огонь', zone: 'dir', pos: [13.15, .35, 7.2], slow: true,
     stages: [{ dur: 9000, ramp: 1, smoke: 5.5e-5, heat: .012, co: .06, label: 'скрытый перегрев' }, { dur: 120, smoke: .006, heat: .05, co: 6, label: 'тление' }, { smoke: .012, heat: .3, co: 24, fire: .7, label: 'горение' }] },
-  { n: 8, name: 'Аккумуляторы ИБП (часы)', sub: 'деградация ~2 ч → тепловой разгон → огонь', zone: 'srv', pos: [13.5, 1.0, 9.68], glow: [M.hazUPS], slow: true,
+  { n: 8, cause: 'battery', name: 'Аккумуляторы ИБП (часы)', sub: 'деградация ~2 ч → тепловой разгон → огонь', zone: 'srv', pos: [13.5, 1.0, 9.68], glow: [M.hazUPS], slow: true,
     stages: [{ dur: 7200, ramp: 1, smoke: 2e-5, heat: .012, co: .01, label: 'деградация батарей' }, { dur: 60, smoke: .003, heat: .25, co: 2, label: 'тепловой разгон' }, { smoke: .012, heat: .4, co: 22, fire: .9, label: 'горение' }] },
 ];
 function badgeTex(n) { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#c62828'; g.beginPath(); g.arc(32, 32, 28, 0, TAU); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke(); g.fillStyle = '#fff'; g.font = 'bold 32px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n, 32, 34); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -906,7 +946,7 @@ fireLights.forEach(l => scene.add(l)); // created upfront so shaders never recom
 for (const h of HAZ) {
   h.seeds = Array.from({ length: 60 }, () => [rnd(), rnd() * TAU, rnd(), rnd() * TAU]);
   h.fseeds = Array.from({ length: 16 }, () => [rnd(), (rnd() - .5) * .5, (rnd() - .5) * .5, .7 + rnd() * .6]);
-  const fg = new THREE.Group(); fg.position.set(h.pos[0], h.n === 1 ? .02 : h.pos[1] - .2, h.pos[2]); fg.visible = false; D.add(fg);
+  const fg = new THREE.Group(); fg.position.set(h.pos[0], h.fireY ?? (h.n === 1 && !SCN ? .02 : h.pos[1] - .2), h.pos[2]); fg.visible = false; D.add(fg);
   h.fire = fg; h.ext = 0; // ext: 0..1 extinguished by the brigade
 }
 const CEIL_Y = 2.85;
@@ -945,7 +985,7 @@ function drawEffects(t, rdt) {
         const rad = (.05 + climb * .35) * r + spread * 2.2 * r;
         const x = h.pos[0] + Math.sin(ph + t * .4) * rad, zz = h.pos[2] + Math.cos(ph + t * .35) * rad;
         const a = Math.sin(Math.PI * k) * (fire ? .55 : .32) * (fire ? Math.max(.25, ex) : 1);
-        const c = fire ? .28 + k * .2 : .62;
+        const c = fire ? .28 + k * .2 : h.aerosol ? .93 : .62;
         SMOKE.add(x, y, zz, (fire ? .45 : .3) + k * (fire ? 1.8 : 1.1), a, rot + t * .2, c, c + .01, c + .03);
       }
     }
@@ -1044,16 +1084,17 @@ const ZONE_PLAN = { hall: BR_PLAN[6], os: { via: BR_PLAN[1].via.slice(0, 3), at:
 const BR = { state: 'idle', inc: null, zone: null, t0: 0, eta: 45, haz: null, plan: null, trail: [], hoseT: 0, hose: null, sprayT: 0, doneT: 0, x: 80, statusTxt: '' };
 const TRUCK_STOP_X = 7.0, TRUCK_Z = 16.25, DRIVE_S = 14;
 const brEl = () => document.getElementById('brigade');
-function brStatus(txt, cls = 'warn') { BR.statusTxt = txt; const el = brEl(); if (el) { el.textContent = txt; el.className = 'pill ' + cls; el.parentElement.style.display = ''; } }
-function brSend(status) { emit('brigade', { status, incident_id: BR.inc, zone_id: BR.zone, elapsed_s: +(simT - BR.t0).toFixed(1) }); }
+function brStatus(txt, cls = 'warn') { BR.statusTxt = txt; const el = brEl(); if (el) { el.innerHTML = TGUI.icon('truck', 14) + txt; el.className = 'pill ' + cls; el.parentElement.style.display = ''; } }
+function brSend(status) { emit('brigade', { status, incident_id: BR.inc, zone_id: BR.zone, elapsed_s: +(simT - BR.t0).toFixed(1), source: BR.haz?.name || null, cause: BR.haz?.cause || null }); }
 function startBrigade({ incident_id = null, zone = null, eta = 45, by = '' } = {}) {
+  if (BR.state === 'done' || BR.state === 'return') resetBrigade(); // previous fire is over — a new call sends the crew again
   if (BR.state !== 'idle') { log('Пожарная бригада уже вызвана', 'e-info'); return; }
   const fireHaz = HAZ.filter(h => h.active && !h.gas && (h.stages[h.stage].fire || (h.stages[h.stage].smoke || 0) > .001));
   const z = zone && ZMAP[zone] ? zone : (fireHaz[0]?.zone || ZONES.find(q => q.confirmed)?.id || 'hall');
   const haz = fireHaz.find(h => h.zone === z) || HAZ.find(h => h.active && h.zone === z) || null;
-  Object.assign(BR, { state: 'enroute', inc: incident_id, zone: z, t0: simT, eta: Math.max(DRIVE_S + 2, eta || 45), haz, plan: haz ? BR_PLAN[haz.n] : ZONE_PLAN[z], trail: [], sprayT: 0, doneT: 0, x: 80 });
-  log(`🚒 Вызов 101 (DEMO${by ? ', ' + by : ''}): пожарная бригада выехала, расчётное прибытие ${BR.eta} с (симуляция, в городе норматив — до 10 мин)`, 'e-alarm');
-  slowDown('выехала пожарная бригада'); brSend('en_route'); brStatus(`🚒 в пути · ${BR.eta} с`);
+  Object.assign(BR, { state: 'enroute', inc: incident_id, zone: z, t0: simT, eta: Math.max(DRIVE_S + 2, eta || 45), haz, plan: SCN ? navAttackPath(haz ? [haz.pos[0], haz.pos[2]] : [(ZMAP[z].x0 + ZMAP[z].x1) / 2, (ZMAP[z].z0 + ZMAP[z].z1) / 2]) : haz ? BR_PLAN[haz.n] : ZONE_PLAN[z], trail: [], sprayT: 0, doneT: 0, x: 80 });
+  log(`Вызов 101 (DEMO${by ? ', ' + by : ''}): пожарная бригада выехала, расчётное прибытие ${BR.eta} с (симуляция, в городе норматив — до 10 мин)`, 'e-alarm');
+  slowDown('выехала пожарная бригада'); brSend('en_route'); brStatus(`в пути · ${BR.eta} с`);
 }
 function personWalk(F, dt) {
   let step = F.speed * dt;
@@ -1071,16 +1112,16 @@ function brigadeStep(dt) {
   const left = BR.eta - (simT - BR.t0);
   if (BR.state === 'enroute') {
     if (left <= DRIVE_S) { BR.state = 'arriving'; FT.root.visible = true; flyTo(new V3(6.5, 1, 12.5), new V3(-6, 6.5, 27)); }
-    else brStatus(`🚒 в пути · ${Math.ceil(left)} с`);
+    else brStatus(`в пути · ${Math.ceil(left)} с`);
   }
   if (BR.state === 'arriving') {
     const u = clamp(1 - left / DRIVE_S, 0, 1), nx = TRUCK_STOP_X + 73 * (1 - u) ** 2;
     const dx = BR.x - nx; BR.x = nx; FT.wheels.forEach(w => w.rotation.z += dx / .52); // rolling forward (-x)
-    brStatus(`🚒 подъезжает · ${Math.ceil(Math.max(0, left))} с`);
+    brStatus(`подъезжает · ${Math.ceil(Math.max(0, left))} с`);
     if (u >= 1) {
-      BR.state = 'deploy'; BR.arrT = simT; brSend('arrived'); log(`🚒 Пожарная бригада прибыла через ${Math.round(simT - BR.t0)} с после вызова (DEMO)`, 'e-ok'); brStatus('🚒 на месте · развёртывание', 'ok');
+      BR.state = 'deploy'; BR.arrT = simT; brSend('arrived'); log(`Пожарная бригада прибыла через ${Math.round(simT - BR.t0)} с после вызова (DEMO)`, 'e-ok'); brStatus('на месте · развёртывание', 'ok');
       for (const d of doorLeaves) if (d.isExit) d.target = (d.pivot.position.z < 1 ? 1 : -1) * 1.6; // doors open for the crew
-      const plan = BR.plan || ZONE_PLAN.hall, path = [...BR_IN, ...plan.via, plan.at];
+      const plan = BR.plan || ZONE_PLAN.hall, path = plan.full || [...BR_IN, ...plan.via, plan.at];
       const back = (() => { const [ax, az] = plan.at, [px, pz] = path[path.length - 2]; const d = Math.hypot(ax - px, az - pz) || 1, k = Math.min(.8, d - .05) / d, nx = -(az - pz) / d, nz = (ax - px) / d; return [ax - (ax - px) * k + nx * .5, az - (az - pz) * k + nz * .5]; })();
       CREW.forEach((F, i) => {
         const sx = [5.4, 6.4, 6.9, 9.6][i]; F.pos.set(sx, 0, TRUCK_Z - 1.45); F.prev.copy(F.pos); F.root.position.copy(F.pos); F.root.visible = true; F.state = 'wait'; F.t = 0; F.delay = i * .8;
@@ -1105,23 +1146,23 @@ function brigadeStep(dt) {
     if ((N.state === 'walk' || N.state === 'spray') && BR.trail.length && BR.state !== 'return') { const last = BR.trail[BR.trail.length - 1]; if (Math.hypot(N.pos.x - last[0], N.pos.z - last[1]) > .4) BR.trail.push([N.pos.x, N.pos.z]); }
     const h = BR.haz;
     if (N.state === 'spray') {
-      if (BR.state === 'deploy') { BR.state = 'attack'; brSend('attack'); log(h ? `🚒 Начато тушение: ${h.name}` : `🚒 Разведка: ${ZMAP[BR.zone].name}`, 'e-alarm'); }
+      if (BR.state === 'deploy') { BR.state = 'attack'; brSend('attack'); log(h ? `Начато тушение: ${h.name}` : `Разведка: ${ZMAP[BR.zone].name}`, 'e-alarm'); }
       if (h && h.active) {
         const tgt = h.pos; N.targetRot = Math.atan2(tgt[0] - N.pos.x, tgt[2] - N.pos.z);
         h.ext = Math.min(1, h.ext + dt / (h.gas ? 8 : 18)); BR.sprayT += dt;
-        brStatus(h.gas ? `🚒 перекрывают газ · ${Math.round(h.ext * 100)}%` : `🚒 тушение · ${Math.round(h.ext * 100)}%`, 'bad');
+        brStatus(h.gas ? `перекрывают газ · ${Math.round(h.ext * 100)}%` : `тушение · ${Math.round(h.ext * 100)}%`, 'bad');
         if (h.ext >= 1) { h.active = false; h.fire.visible = false; renderHazButtons(); }
       } else BR.sprayT += dt;
       if ((!h || !h.active) && BR.state === 'attack' && (h || BR.sprayT > 6)) {
-        BR.state = 'done'; BR.doneT = simT; const z = ZMAP[BR.zone]; z.vent = 1;
-        log(h ? (h.gas ? '🚒 Газ перекрыт, помещение проветривается' : `🚒 Пожар ликвидирован (${z.name}). Дымоудаление.`) : `🚒 Очаг не обнаружен (${z.name})`, 'e-ok');
-        brSend('extinguished'); brStatus(h ? '🚒 пожар ликвидирован' : '🚒 очаг не обнаружен', 'ok');
+        BR.state = 'done'; BR.doneT = simT; const z = ZMAP[BR.zone]; for (const zz of ZONES) zz.vent = 1; // smoke extraction for the whole floor
+        log(h ? (h.gas ? 'Газ перекрыт, помещение проветривается' : `Пожар ликвидирован (${z.name}). Дымоудаление.`) : `Очаг не обнаружен (${z.name})`, 'e-ok');
+        brSend('extinguished'); brStatus(h ? 'пожар ликвидирован' : 'очаг не обнаружен', 'ok');
       }
     }
     if (BR.state === 'done' && simT - BR.doneT > 20 && N.state === 'spray') {
       const back = [...BR.trail].reverse().map(([x, z]) => [x, z]);
       crewGo(N, [...back.slice(1), [6.0, 13.2]], 'idle'); crewGo(CREW[2], [...back.slice(2), [7.0, 13.3]], 'idle'); BR.trail = [];
-      BR.state = 'return'; brSend('returning'); brStatus('🚒 работа завершена', 'ok');
+      BR.state = 'return'; brSend('returning'); brStatus('работа завершена', 'ok');
     }
   }
   for (const z of ZONES) if (z.vent) { z.smoke *= 1 - .02 * dt; z.co *= 1 - .02 * dt; z.lel *= 1 - .03 * dt; z.temp += (AMB - z.temp) * .02 * dt; }
@@ -1188,12 +1229,89 @@ function brigadeEffects(t, rdt) {
   WATER.end(camera);
 }
 
+// ================= Navigation grid + A* (used by the extra buildings: evacuation and fire-crew routes) =================
+const NAV = { x0: -4, z0: -5, cs: .25, w: 0, h: 0, g: null };
+function buildNav() {
+  const cs = NAV.cs; NAV.w = Math.ceil((19 - NAV.x0) / cs); NAV.h = Math.ceil((16 - NAV.z0) / cs);
+  const g = NAV.g = new Uint8Array(NAV.w * NAV.h);
+  const mark = (x0, z0, x1, z1) => {
+    const i0 = Math.max(0, Math.floor((x0 - NAV.x0) / cs)), i1 = Math.min(NAV.w - 1, Math.floor((x1 - NAV.x0) / cs));
+    const j0 = Math.max(0, Math.floor((z0 - NAV.z0) / cs)), j1 = Math.min(NAV.h - 1, Math.floor((z1 - NAV.z0) / cs));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const cx = NAV.x0 + (i + .5) * cs, cz = NAV.z0 + (j + .5) * cs; if (cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1) g[j * NAV.w + i] = 1; }
+  };
+  for (const Wl of WALLS) {
+    const pass = Wl.ops.filter(o => ['door', 'exit', 'arch'].includes(o[4])).sort((a, b) => a[0] - b[0]);
+    let cur = Wl.a0; const segs = [];
+    for (const [s0, e0] of pass) { segs.push([cur, s0 + .08]); cur = e0 - .08; }
+    segs.push([cur, Wl.a1]);
+    const r = Wl.t / 2 + .17;
+    for (const [s0, e0] of segs) if (e0 > s0) { if (Wl.axis === 'x') mark(s0 - .1, Wl.c - r, e0 + .1, Wl.c + r); else mark(Wl.c - r, s0 - .1, Wl.c + r, e0 + .1); }
+  }
+  for (const b of NAV_BLOCKS) mark(b.x0 - .14, b.z0 - .14, b.x1 + .14, b.z1 + .14);
+}
+const navIdx = (x, z) => [Math.floor((x - NAV.x0) / NAV.cs), Math.floor((z - NAV.z0) / NAV.cs)];
+const navFree = (i, j) => i >= 0 && j >= 0 && i < NAV.w && j < NAV.h && !NAV.g[j * NAV.w + i];
+const navPt = (i, j) => [NAV.x0 + (i + .5) * NAV.cs, NAV.z0 + (j + .5) * NAV.cs];
+function navNearestFree(i, j) {
+  if (navFree(i, j)) return [i, j];
+  for (let r = 1; r < 12; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) if (Math.max(Math.abs(di), Math.abs(dj)) === r && navFree(i + di, j + dj)) return [i + di, j + dj];
+  return [i, j];
+}
+function navLine(ax, az, bx, bz) { // straight segment stays on free cells?
+  const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / .1);
+  for (let k = 0; k <= n; k++) { const [i, j] = navIdx(ax + (bx - ax) * k / n, az + (bz - az) * k / n); if (!navFree(i, j)) return false; }
+  return true;
+}
+// A* from (sx,sz) to (tx,tz); costAt(x,z) adds a penalty (smoke). Returns smoothed waypoints [[x,z],...] without the start.
+function navPath(sx, sz, tx, tz, costAt = null) {
+  if (!NAV.g) buildNav();
+  const [si, sj] = navNearestFree(...navIdx(sx, sz)), [ti, tj] = navNearestFree(...navIdx(tx, tz)), W2 = NAV.w;
+  const N = NAV.w * NAV.h, gs = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
+  const heap = []; const push = (f, k) => { heap.push([f, k]); let c = heap.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; [heap[p], heap[c]] = [heap[c], heap[p]]; c = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let c = 0; for (;;) { const l = 2 * c + 1, r = l + 1; let m = c; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === c) break; [heap[m], heap[c]] = [heap[c], heap[m]]; c = m; } } return top; };
+  const s = sj * W2 + si, t = tj * W2 + ti; gs[s] = 0; push(0, s);
+  const D8 = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
+  while (heap.length) {
+    const [, k] = pop(); if (closed[k]) continue; closed[k] = 1; if (k === t) break;
+    const i = k % W2, j = (k / W2) | 0;
+    for (const [di, dj, c] of D8) {
+      const ni = i + di, nj = j + dj; if (!navFree(ni, nj)) continue;
+      if (di && dj && (!navFree(i + di, j) || !navFree(i, j + dj))) continue; // no corner cutting
+      const nk = nj * W2 + ni, [px, pz] = navPt(ni, nj), g2 = gs[k] + c * NAV.cs * (1 + (costAt ? costAt(px, pz) : 0));
+      if (g2 < gs[nk]) { gs[nk] = g2; from[nk] = k; push(g2 + Math.hypot(ni - ti, nj - tj) * NAV.cs, nk); }
+    }
+  }
+  if (from[t] < 0 && s !== t) return { pts: [[tx, tz]], cost: 1e9 };
+  const raw = []; for (let k = t; k !== -1; k = from[k]) raw.push(navPt(k % W2, (k / W2) | 0)); raw.reverse();
+  const out = []; let a = [sx, sz], idx = 0;
+  while (idx < raw.length - 1) { let far = idx + 1; for (let q = raw.length - 1; q > idx + 1; q--) if (navLine(a[0], a[1], raw[q][0], raw[q][1])) { far = q; break; } out.push(raw[far]); a = raw[far]; idx = far; }
+  if (!out.length) out.push(raw[raw.length - 1] || [tx, tz]);
+  return { pts: out, cost: gs[t] };
+}
+function navEvacRoute(P, i) {
+  const smoke = (x, z) => { const zz = zoneAt(x, z); let c = zz ? zz.smoke * 8 + zz.lel / 10 : 0; for (const h of HAZ) if (h.active && h.stage > 0 && Math.hypot(x - h.pos[0], z - h.pos[2]) < 1.6) c += 6; return c; };
+  let best = null, ex = null;
+  for (const e of SCN.exits) { const r = navPath(P.pos.x, P.pos.z, e.out[0], e.out[1], smoke); if (!best || r.cost < best.cost) { best = r; ex = e; } }
+  const [ax, az] = ex.assembly, k = i % 5 - 2, row = Math.floor(i / 5);
+  return [...best.pts, [ax + k * .72, az + row * .8 * (az > 5 ? 1 : -1)]];
+}
+// fire-crew route from the street to a spot ~1.6 m from the seat of the fire
+function navAttackPath(target) {
+  const start = [6.25, 12.4], r = navPath(start[0], start[1], target[0], target[1]);
+  const pts = [[6.4, 14.35], start];
+  for (const p of r.pts) { pts.push(p); if (Math.hypot(p[0] - target[0], p[1] - target[1]) < 1.7 && navLine(p[0], p[1], target[0], target[1]) !== false) break; }
+  let last = pts[pts.length - 1]; const d = Math.hypot(last[0] - target[0], last[1] - target[1]);
+  if (d > 1.7) { const prev = pts[pts.length - 2]; // walk along the last leg until 1.6 m away
+    const L = Math.hypot(last[0] - prev[0], last[1] - prev[1]) || 1; for (let u = 0; u <= 1; u += .05) { const x = prev[0] + (last[0] - prev[0]) * u, z = prev[1] + (last[1] - prev[1]) * u; if (Math.hypot(x - target[0], z - target[1]) < 1.6) { pts[pts.length - 1] = [x, z]; break; } } }
+  return { full: pts, via: [], at: pts[pts.length - 1] };
+}
+
 // ================= Simulation =================
 const AMB = 22;
-const ADJ = [['os', 'meet'], ['os', 'dir'], ['os', 'hall'], ['hall', 'kit'], ['hall', 'srv']];
+const ADJ = SCN ? SCN.adj : [['os', 'meet'], ['os', 'dir'], ['os', 'hall'], ['hall', 'kit'], ['hall', 'srv']];
 const SESSION = { id: 'S-' + Math.random().toString(36).slice(2, 10) };
 let simEpoch = Date.now(); const vnow = () => new Date(simEpoch + simT * 1000).toISOString();
-let autoCallT = null, simT = 0, speed = 5, alertsOn = true, evacuating = false, sirenOn = false, sirenSilenced = false, statusLevel = 0, statusText = 'Норма';
+let allClearT = null, autoCallT = null, simT = 0, speed = 5, alertsOn = true, evacuating = false, sirenOn = false, sirenSilenced = false, statusLevel = 0, statusText = 'Норма';
 function resetZones() { for (const z of ZONES) Object.assign(z, { smoke: 0, temp: AMB, co: 0, lel: 0, confirmed: false }); }
 resetZones();
 const logEl = document.getElementById('log');
@@ -1201,7 +1319,7 @@ const fmtT = (t) => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Mat
 function log(msg, cls = 'e-info') { const d = document.createElement('div'); d.className = cls; d.innerHTML = `<span class="t">${fmtT(simT)}</span>${msg}`; logEl.prepend(d); while (logEl.children.length > 60) logEl.lastChild.remove(); }
 const BUS = new EventTarget();
 window.TUTIN = { brigade: BR, crew: CREW, bus: BUS, sensors: SENSORS, zones: ZONES, people: PEOPLE, hazards: HAZ, trigger: (n) => toggleHazard(HAZ[n - 1]), advance: (sec) => { for (let i = 0; i < sec * 10; i++) simStep(.1); }, view: (cx, cy, cz, tx, ty, tz) => flyTo(new V3(tx, ty, tz), new V3(cx, cy, cz)) };
-function emit(type, payload) { BUS.dispatchEvent(new CustomEvent(type, { detail: { type, schema: '1.0', ts: vnow(), site_id: 'office-01', simulated: true, ...payload } })); }
+function emit(type, payload) { BUS.dispatchEvent(new CustomEvent(type, { detail: { type, schema: '1.0', ts: vnow(), site_id: SITE_ID, simulated: true, ...payload } })); }
 
 function sensorRead(s) {
   const z = ZMAP[s.zone]; if (!z) return 0;
@@ -1248,6 +1366,7 @@ function evalSensor(s, dt) {
   else if (s.type === 'gas_lel') { if (v >= 20) { st = 'alarm'; why = v.toFixed(0) + '% НКПР'; } else if (v >= 10) { st = 'pre_alarm'; why = v.toFixed(0) + '% НКПР'; } }
   else if (s.type === 'gas_co') { s.coHigh = v >= 100 ? (s.coHigh || 0) + dt : 0; if (v >= 300 || s.coHigh >= 60) { st = 'alarm'; why = v.toFixed(0) + ' ppm'; } else if (v >= 50) { st = 'pre_alarm'; why = v.toFixed(0) + ' ppm'; } }
   else if (s.type === 'manual') { if (v) { st = 'alarm'; why = 'нажата кнопка'; } }
+  s.rawState = st;
   if (s.state === 'alarm' && st !== 'alarm') return; // fire panels latch alarms until reset
   const PRE = { smoke: .05, multi: .05, heat: 45, gas_lel: 10, gas_co: 50 };
   if (s.state === 'pre_alarm' && st === 'normal' && PRE[s.type] !== undefined && v > PRE[s.type] * .85 && !(s.type === 'heat' && v < 40)) return; // hysteresis
@@ -1255,7 +1374,9 @@ function evalSensor(s, dt) {
 }
 function toggleHazard(h) {
   if (h.active) { h.active = false; h.fire.visible = false; log(`Источник ${h.n} остановлен`, 'e-info'); }
-  else { h.active = true; h.stage = 0; h.t = 0; h.ext = 0; log(`▶ Источник ${h.n}: ${h.name} — ${h.stages[0].label}`, 'e-pre'); }
+  else { h.active = true; h.stage = 0; h.t = 0; h.ext = 0;
+    if (h.slow && speed < 60) { speed = 60; const sel = document.getElementById('selSpeed'); if (sel) sel.value = '60'; log('Медленный сценарий (часы): скорость ×60 — 1 секунда = 1 минута. При подтверждении пожара скорость снизится сама', 'e-info'); }
+    log(`▶ Источник ${h.n}: ${h.name} — ${h.stages[0].label}`, 'e-pre'); }
   renderHazButtons();
 }
 function slowDown(why) {
@@ -1263,14 +1384,33 @@ function slowDown(why) {
   speed = 2; const sel = document.getElementById('selSpeed'); if (sel) sel.value = '2';
   log(`Скорость снижена до ×2: ${why} — так видно эвакуацию и работу пожарных`, 'e-info');
 }
+function allClear() {
+  allClearT = null; autoCallT = null;
+  for (const z of ZONES) { z.confirmed = false; z.gasConfirmed = false; z.firstAlarmT = null; }
+  const wasAlarm = sirenOn || evacuating;
+  sirenOn = false; sirenSilenced = false; evacuating = false;
+  SND?.stopVoice(); if (wasAlarm) SND?.voice('allclear');
+  for (const d of doorLeaves) if (d.isExit) d.target = 0;
+  // the panel is reset: latched detectors (and pressed call points) go back to normal
+  for (const q of SENSORS) if (!q.offline && q.state !== 'normal') { q.pressed = false; q.state = '_'; setSensorState(q, 'normal'); }
+  log('Отбой тревоги: все системы в норме, прибор сброшен, сирены выключены. Люди возвращаются на места.', 'e-ok');
+  PEOPLE.forEach(P => {
+    if (P.state === 'down') return;                       // injured stay for the medics
+    if (P.state === 'out' || P.state === 'walk') {
+      const back = (P.route || []).slice(0, P.wp).reverse(); back.push([P.seat.x, P.seat.z]);
+      Object.assign(P, { route: back, wp: 0, state: 'walk', returning: true });
+    } else { P.alertAt = null; if (P.state === 'stand') { P.state = 'sit'; applyPose(P, POSE[P.seat.pose || 'sit']); } }
+  });
+}
 function startEvac(reason) {
   if (evacuating) return; evacuating = true;
   SND?.play('door', .6);
   log(`Эвакуация: ${reason}`, 'e-alarm');
   for (const d of doorLeaves) if (d.isExit) d.target = (d.pivot.position.z < 1 ? 1 : -1) * 1.6;
-  PEOPLE.forEach(P => { if (P.state === 'sit' && P.alertAt === null) P.alertAt = simT + 2 + rnd() * 6; });
+  PEOPLE.forEach(P => { if (P.state === 'sit' && P.alertAt === null) P.alertAt = simT + 2 + rnd() * 6 + (P.seat.slow ? 10 : 0); });
 }
 function chooseRoute(P, i) {
+  if (SCN) return navEvacRoute(P, i);
   const rs = routesFor(P, i); let best = null, bs = 1e9;
   for (const r of rs) {
     let len = 0, worst = 0, px = P.pos.x, pz = P.pos.z;
@@ -1292,7 +1432,7 @@ function simStep(dt) {
     if (st.dur && h.t > st.dur && h.stage < h.stages.length - 1) {
       h.stage++; h.t = 0; st = h.stages[h.stage];
       log(`Источник ${h.n}: ${st.label}`, st.fire ? 'e-alarm' : 'e-info'); renderHazButtons();
-      if (st.end) { h.active = false; renderHazButtons(); continue; }
+      if (st.end) { h.active = false; h.offT = simT; renderHazButtons(); continue; }
     }
     const z = ZMAP[h.zone], area = (z.x1 - z.x0) * (z.z1 - z.z0), f = clamp(25 / area, .5, 2);
     const ramp = st.ramp ? .05 + 2.2 * Math.pow(Math.min(h.t / st.dur, 1), 2) : 1; // slow, accelerating precursor
@@ -1305,7 +1445,8 @@ function simStep(dt) {
   }
   for (const z of ZONES) {
     const out = evacuating && (z.id === 'os' || z.id === 'hall') ? .006 : .0015;
-    z.smoke *= 1 - out * dt; z.co *= 1 - out * dt; z.lel *= 1 - (out + .001) * dt; z.temp += (AMB - z.temp) * .0015 * dt;
+    const aero = HAZ.some(h => h.aerosol && h.zone === z.id && (h.active || simT - (h.offT ?? -1e9) < 180)) ? .05 : 0; // vape/steam aerosol settles quickly
+    z.smoke *= 1 - (out + aero) * dt; z.co *= 1 - out * dt; z.lel *= 1 - (out + .001) * dt; z.temp += (AMB - z.temp) * .0015 * dt;
     z.smoke = clamp(z.smoke, 0, 3); z.temp = clamp(z.temp, -10, 400); z.co = clamp(z.co, 0, 20000); z.lel = clamp(z.lel, 0, 100);
   }
   for (const s of SENSORS) evalSensor(s, dt);
@@ -1313,11 +1454,17 @@ function simStep(dt) {
   let level = 0, txt = 'Норма';
   for (const z of ZONES) {
     const ss = SENSORS.filter(s => s.zone === z.id);
-    const fireAl = ss.filter(s => ['smoke', 'heat'].includes(s.type) && s.state === 'alarm').length;
+    const fireDet = ss.filter(s => ['smoke', 'heat', 'multi'].includes(s.type)), fireAl = fireDet.filter(s => s.state === 'alarm').length;
+    // re-query ("перезапрос"): one detector in alarm is confirmed if, 60 s later, the reading is still above the alarm threshold
+    if (fireAl >= 1) z.firstAlarmT ??= simT; else z.firstAlarmT = null;
+    const stillHot = (q) => q.type === 'heat' ? q.value >= 57 : q.type === 'multi' ? (q.value >= .15 || q.temp >= 57 || q.coV >= 300) : q.value >= .15;
+    const requery = fireAl >= 1 && simT - z.firstAlarmT >= 60 && fireDet.some(q => q.state === 'alarm' && !q.offline && stillHot(q));
     const manual = ss.some(s => s.type === 'manual' && s.state === 'alarm');
     const gas = ss.some(s => (s.type === 'gas_lel' || s.type === 'gas_co') && s.state === 'alarm');
     const pre = ss.some(s => s.state === 'pre_alarm' || s.state === 'alarm');
-    if ((fireAl >= 2 || manual) && !z.confirmed) { z.confirmed = true; slowDown('пожар подтверждён'); log(`ПОЖАР подтверждён: ${z.name} (${manual ? 'ручной извещатель' : fireAl + ' датчика'})`, 'e-alarm'); emit('incident', { zone_id: z.id, kind: 'fire', level: 'fire' }); }
+    if ((fireAl >= 2 || manual || requery) && !z.confirmed) { z.confirmed = true; slowDown('пожар подтверждён'); const why = manual ? 'ручной извещатель' : fireAl >= 2 ? fireAl + ' датчика' : 'перезапрос: сигнал держится 60 с'; log(`ПОЖАР подтверждён: ${z.name} (${why})`, 'e-alarm');
+      const src = fireDet.find(q => q.state === 'alarm') || ss.find(q => q.type === 'manual' && q.state === 'alarm');
+      if (src) emit('event', { event_id: 'cnf-' + Math.random().toString(16).slice(2, 7), zone_id: z.id, device_id: src.id, event: 'fire_confirmed', category: 'panel', prev_state: 'alarm', state: 'alarm', value: { reason: why }, source: 'panel' }); emit('incident', { zone_id: z.id, kind: 'fire', level: 'fire' }); }
     if (gas && !z.gasConfirmed) { z.gasConfirmed = true; log(`ГАЗ: ${z.name} — опасная концентрация`, 'e-alarm'); emit('incident', { zone_id: z.id, kind: 'gas', level: 'gas' }); }
     if (z.confirmed && level < 3) { level = 3; txt = 'ПОЖАР · ' + z.name; }
     else if (z.gasConfirmed && level < 3) { level = 3; txt = 'ГАЗ · ' + z.name; }
@@ -1326,7 +1473,7 @@ function simStep(dt) {
   if (SENSORS.some(s => s.state === 'offline') && level < 1) { level = 1; txt = 'Неисправность'; }
   if (level !== statusLevel || txt !== statusText) {
     statusLevel = level; statusText = txt;
-    const el = document.getElementById('status'); el.textContent = txt; el.className = 'pill ' + (level >= 3 ? 'bad' : level >= 1 ? 'warn' : 'ok');
+    const el = document.getElementById('status'); el.textContent = txt.split(' · ').map((x, i) => i ? x : TGUI.t(x)).join(' · '); el.className = 'pill ' + (level >= 3 ? 'bad' : level >= 1 ? 'warn' : 'ok');
     drawPanel(level >= 3 ? (txt.startsWith('ГАЗ') ? 'ГАЗ' : 'ПОЖАР') : level === 2 ? 'ВНИМАНИЕ' : level === 1 ? 'НЕИСПР.' : 'НОРМА', level >= 3 ? '#f87171' : level >= 1 ? '#fde047' : '#4ade80');
   }
   // without the server nobody can press "call 101": the scene calls the (virtual) brigade itself 15 s after confirmation
@@ -1334,6 +1481,10 @@ function simStep(dt) {
   if (level >= 3 && !sirenOn && !sirenSilenced) {
     sirenOn = alertsOn; if (alertsOn) startEvac('сработала автоматика, включены сирены');
   }
+  // all clear: no burning source and every detector back to normal for 20 s → sirens off, exits closed, people go back
+  const quiet = !HAZ.some(h => h.active) && SENSORS.every(q => q.offline || (q.type === 'manual' ? !q.pressed || ['done', 'return'].includes(BR.state) : (q.rawState ?? 'normal') === 'normal'));
+  if (quiet && (evacuating || sirenOn || ZONES.some(z => z.confirmed || z.gasConfirmed))) { allClearT ??= simT; if (simT - allClearT > 20) allClear(); }
+  else allClearT = null;
   // people
   PEOPLE.forEach((P, i) => {
     P.prev.copy(P.pos);
@@ -1345,13 +1496,13 @@ function simStep(dt) {
     const fed = Math.max(P.fedCO, P.fedHeat);
     if (P.state === 'sit' && P.alertAt === null && zp) {
       const sees = zp.smoke > .3 || HAZ.some(h => h.active && h.stage > 0 && h.zone === zp.id) || zp.lel > 30;
-      if (sees) { P.alertAt = simT + 4 + rnd() * 6; log(`${P.label} сам заметил опасность`, 'e-pre'); }
+      if (sees) { P.alertAt = simT + 4 + rnd() * 6 + (P.seat.slow ? 10 : 0); log(`${P.label} сам заметил опасность`, 'e-pre'); }
     }
     if (P.state === 'sit' && P.alertAt !== null && simT >= P.alertAt) { P.state = 'stand'; P.t = 0; P.route = chooseRoute(P, i); P.wp = 0; }
-    if (P.state === 'stand') { P.t += dt; applyPose(P, POSE.sit, POSE.stand, clamp(P.t / 1.2, 0, 1)); if (P.t > 1.2) P.state = 'walk'; }
+    if (P.state === 'stand') { P.t += dt; applyPose(P, POSE[P.seat.pose || 'sit'], POSE.stand, clamp(P.t / 1.2, 0, 1)); if (P.t > 1.2) P.state = 'walk'; }
     if (P.state === 'walk') {
       if (fed >= 1) { P.state = 'down'; log(`${P.label}: потерял сознание (FED ≥ 1)`, 'e-alarm'); return; }
-      const vis = zp ? zp.smoke : 0, v = 1.25 * clamp(1 - vis / .9, .35, 1) * (fed > .3 ? .6 : 1);
+      const vis = zp ? zp.smoke : 0, v = 1.25 * clamp(1 - vis / .9, .35, 1) * (fed > .3 ? .6 : 1) * (P.seat.slow ? .38 : 1); // patients move slowly / need help
       let step = v * dt;
       while (step > 0 && P.wp < P.route.length) {
         const [tx, tz] = P.route[P.wp], dx = tx - P.pos.x, dz = tz - P.pos.z, d = Math.hypot(dx, dz);
@@ -1359,7 +1510,10 @@ function simStep(dt) {
         const mv = Math.min(step, d); P.pos.x += dx / d * mv; P.pos.z += dz / d * mv; step -= mv;
         P.targetRot = Math.atan2(dx, dz); if (mv >= d - 1e-4) P.wp++;
       }
-      if (P.wp >= P.route.length) { P.state = 'out'; P.evacT = simT; log(`${P.label} эвакуирован(а) за ${Math.round(simT - P.alertAt)} с`, 'e-ok'); applyPose(P, POSE.stand); }
+      if (P.wp >= P.route.length) {
+        if (P.returning) { Object.assign(P, { state: 'sit', returning: false, alertAt: null, route: null, wp: 0 }); P.pos.set(P.seat.x, 0, P.seat.z); P.root.rotation.set(0, P.seat.rot, 0); applyPose(P, POSE[P.seat.pose || 'sit']); }
+        else { P.state = 'out'; P.evacT = simT; log(`${P.label} эвакуирован(а) за ${Math.round(simT - P.alertAt)} с`, 'e-ok'); applyPose(P, POSE.stand); }
+      }
     }
   });
 }
@@ -1402,19 +1556,28 @@ function renderHazButtons() {
   hzEl.innerHTML = '';
   for (const h of HAZ) {
     const b = document.createElement('button'); b.className = 'hz' + (h.active ? ' active' : '');
-    b.innerHTML = `<b>${h.n}</b><span>${h.name}<small>${h.active ? '● ' + h.stages[h.stage].label + ' · нажмите, чтобы остановить' : h.sub}</small></span>`;
+    b.innerHTML = `<b>${h.n}</b><span>${h.name}<small>${h.active ? '● ' + h.stages[h.stage].label + ' · ' + TGUI.t('нажмите, чтобы остановить') : h.sub}</small></span>`;
     b.onclick = () => toggleHazard(h); hzEl.appendChild(b);
   }
 }
 renderHazButtons();
 document.getElementById('btnEvac').onclick = () => { if (alertsOn) { sirenOn = true; sirenSilenced = false; } startEvac('запущена вручную'); };
+TGUI.apply();
+document.getElementById('logo').innerHTML = TGUI.LOGO;
+{ const seg = document.getElementById('segTheme');
+  seg.querySelectorAll('button').forEach((b) => { b.innerHTML = TGUI.icon(b.dataset.th === 'dark' ? 'moon' : 'sun', 15); b.onclick = () => { TGUI.setTheme(b.dataset.th); upd(); }; });
+  const upd = () => seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.th === TGUI.theme)); upd();
+  const sl = document.getElementById('selLang'); sl.value = TGUI.LANG; sl.onchange = () => TGUI.setLang(sl.value); }
 if (SND) SND.bindButton(document.getElementById('btnSound')); else document.getElementById('btnSound').style.display = 'none';
 document.getElementById('btnReset').onclick = resetAll;
+{ const sel = document.getElementById('selScene'); sel.innerHTML = SCENE_LIST.map(([k, n]) => `<option value="${k}" ${k === SCENE_ID ? 'selected' : ''}>${n}</option>`).join('');
+  sel.onchange = () => { const q = new URLSearchParams(location.search); q.set('scene', sel.value); location.search = q.toString(); };
+  if (SCN) { document.getElementById('brandSub').textContent = '3D · ' + SCN.short + ' · demo'; document.title = 'TutinGuard — ' + SCN.name; } }
 document.getElementById('btnFire').onclick = () => { if (BR.state !== 'idle') { if (FT.root.visible) flyTo(new V3(6.5, 1, 12.5), new V3(-6, 6.5, 27)); return; } startBrigade({ by: 'вызов из сцены' }); };
 document.getElementById('selSpeed').onchange = (e) => speed = +e.target.value;
 document.getElementById('chkAlerts').onchange = (e) => { alertsOn = e.target.checked; log(alertsOn ? 'Оповещение включено' : 'Оповещение ОТКЛЮЧЕНО — люди узнают о пожаре сами', alertsOn ? 'e-ok' : 'e-pre'); };
 const btnWalls = document.getElementById('btnWalls');
-btnWalls.onclick = () => { wallH = wallH > 2 ? WALL_H_LOW : WALL_H_FULL; btnWalls.classList.toggle('on', wallH < 2); btnWalls.textContent = wallH < 2 ? 'Полные стены' : 'Низкие стены'; buildWalls(); };
+btnWalls.onclick = () => { wallH = wallH > 2 ? WALL_H_LOW : WALL_H_FULL; btnWalls.classList.toggle('on', wallH < 2); btnWalls.innerHTML = TGUI.icon('walls') + TGUI.t(wallH < 2 ? 'Полные стены' : 'Низкие стены'); buildWalls(); };
 let fly = null;
 function flyTo(target, pos) { fly = { t: 0, ft: controls.target.clone(), fp: camera.position.clone(), tt: target, tp: pos }; }
 document.getElementById('btnTop').onclick = () => flyTo(new V3(7, 0, 5), new V3(7, 21, 5.6));
@@ -1425,13 +1588,13 @@ function resetAll() {
   window.__tgHello?.();
   const wasAlarm = sirenOn || statusLevel >= 3;
   SND?.stopVoice(); if (wasAlarm) SND?.voice('allclear');
-  simT = 0; evacuating = false; sirenOn = false; sirenSilenced = false; statusLevel = -1; resetZones();
+  simT = 0; evacuating = false; sirenOn = false; sirenSilenced = false; statusLevel = -1; allClearT = null; resetZones();
   for (const h of HAZ) { h.active = false; h.stage = 0; h.t = 0; h.fire.visible = false; }
   resetBrigade(); autoCallT = null;
   for (const s of SENSORS) { s.offline = false; s.pressed = false; s.ror = 0; s.prevT = AMB; s.state = '_'; setSensorState(s, 'normal'); }
-  for (const z of ZONES) { z.confirmed = false; z.gasConfirmed = false; }
+  for (const z of ZONES) { z.confirmed = false; z.gasConfirmed = false; z.firstAlarmT = null; }
   for (const d of doorLeaves) if (d.isExit) { d.target = 0; }
-  PEOPLE.forEach(P => { Object.assign(P, { state: 'sit', t: 0, wp: 0, route: null, fedCO: 0, fedHeat: 0, alertAt: null, phase: 0 }); P.root.position.set(P.seat.x, 0, P.seat.z); P.pos.set(P.seat.x, 0, P.seat.z); P.prev.copy(P.pos); P.root.rotation.set(0, P.seat.rot, 0); applyPose(P, POSE.sit); });
+  PEOPLE.forEach(P => { Object.assign(P, { state: 'sit', t: 0, wp: 0, route: null, fedCO: 0, fedHeat: 0, alertAt: null, phase: 0, returning: false }); P.root.position.set(P.seat.x, 0, P.seat.z); P.pos.set(P.seat.x, 0, P.seat.z); P.prev.copy(P.pos); P.root.rotation.z = 0; P.root.position.y = 0; P.root.rotation.set(0, P.seat.rot, 0); applyPose(P, POSE[P.seat.pose || 'sit']); });
   logEl.innerHTML = ''; log('Сброс. Все системы в норме.', 'e-ok'); renderHazButtons();
 }
 
@@ -1478,13 +1641,13 @@ renderer.domElement.addEventListener('pointermove', e => {
 const ztab = document.getElementById('ztab'), peopleEl = document.getElementById('people');
 function refreshPanels() {
   document.getElementById('clock').textContent = fmtT(simT);
-  let html = '<tr><th>Зона</th><th>Дым</th><th>T °C</th><th>CO</th><th>CH₄</th><th title="AI-прогноз сервера: вероятность возгорания в ближайший час">AI</th></tr>';
+  let html = '<tr><th>' + TGUI.t('Зона') + '</th><th>' + TGUI.t('Дым') + '</th><th>T °C</th><th>CO</th><th>CH₄</th><th title="AI-прогноз сервера: вероятность возгорания в ближайший час">AI</th></tr>';
   for (const z of ZONES) {
     const c = (v, w, b) => v >= b ? 'b' : v >= w ? 'w' : '';
     html += `<tr><td>${z.name.split(' ·')[0]}</td><td class="${c(z.smoke, .05, .15)}">${z.smoke.toFixed(2)}</td><td class="${c(z.temp, 45, 57)}">${z.temp.toFixed(0)}</td><td class="${c(z.co, 50, 100)}">${z.co.toFixed(0)}</td><td class="${c(z.lel, 10, 20)}">${z.lel.toFixed(0)}%</td><td class="${z.aiRisk ? (z.aiRisk.level === 'high' ? 'b' : z.aiRisk.level === 'elevated' ? 'w' : '') : ''}">${z.aiRisk ? (z.aiRisk.prob * 100).toFixed(0) + '%' : '—'}</td></tr>`;
   }
   ztab.innerHTML = html;
-  peopleEl.innerHTML = PEOPLE.map(P => { const f = Math.max(P.fedCO, P.fedHeat); const col = injuryCol(f, P.state); const st = { sit: '', stand: '↑', walk: '→', out: '✓', down: '✕' }[P.state]; return `<span><span class="dot" style="background:#${col.toString(16).padStart(6, '0')}"></span>${P.label} ${st} <span class="muted">${f.toFixed(2)}</span></span>`; }).join('');
+  peopleEl.innerHTML = PEOPLE.map(P => { const f = Math.max(P.fedCO, P.fedHeat); const col = injuryCol(f, P.state); const st = { sit: '', stand: TGUI.icon('up', 12), walk: TGUI.icon('walk', 12), out: TGUI.icon('check', 12), down: TGUI.icon('x', 12) }[P.state]; return `<span><span class="dot" style="background:#${col.toString(16).padStart(6, '0')}"></span>${P.label} ${st} <span class="muted">${f.toFixed(2)}</span></span>`; }).join('');
 }
 function injuryCol(f, st) { if (st === 'down') return 0x7f1d1d; return f < .1 ? 0x22c55e : f < .3 ? 0xfacc15 : f < .6 ? 0xf97316 : f < 1 ? 0xef4444 : 0x7f1d1d; }
 
@@ -1517,7 +1680,7 @@ renderer.setAnimationLoop(() => {
     else if (P.state === 'down' && P.root.rotation.z < PI / 2 - .01) { P.root.rotation.z += (PI / 2 - P.root.rotation.z) * Math.min(1, rdt * 4); P.root.position.y = Math.sin(P.root.rotation.z) * .14; }
     const f = Math.max(P.fedCO, P.fedHeat); P.ring.material.color.setHex(injuryCol(f, P.state)); P.ring.visible = P.state !== 'down';
   }
-  RACK_E.emissiveIntensity = 1.0 + Math.sin(t * 9) * .25;
+  if (RACK_E) RACK_E.emissiveIntensity = 1.0 + Math.sin(t * 9) * .25;
   panelAcc += rdt; if (panelAcc > .25) { panelAcc = 0; refreshPanels(); }
   renderer.render(scene, camera);
 });
@@ -1544,15 +1707,15 @@ const LINK = (() => {
   if (url && token) url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
   let ws = null, everOpen = false, fails = 0, sent = 0, stopped = false;
   const queue = []; const seqs = {};
-  const set = (txt, cls, title = '') => { el.textContent = txt; el.className = 'pill ' + cls; el.title = title; };
+  const set = (txt, cls, title = '') => { el.textContent = TGUI.t(txt); el.className = 'pill ' + cls; el.title = title; };
   function send(msg, important = false) {
     if (ws && ws.readyState === 1) { ws.send(JSON.stringify(msg)); sent++; return; }
     if (important && queue.length < 300) queue.push(msg);
   }
   function hello() {
-    send({ type: 'hello', schema: '1.0', ts: new Date().toISOString(), site_id: 'office-01', role: 'simulator', simulated: true, session_id: SESSION.id,
-      site_name: 'Офис IT-компании (демо)',
-      zones: ZONES.map(z => ({ zone_id: z.id, name: z.name, polygon: [[z.x0, z.z0], [z.x1, z.z0], [z.x1, z.z1], [z.x0, z.z1]] })),
+    send({ type: 'hello', schema: '1.0', ts: new Date().toISOString(), site_id: SITE_ID, role: 'simulator', simulated: true, session_id: SESSION.id,
+      site_name: SITE_NAME, site_kind: SCN ? SCN.kind : 'office',
+      zones: ZONES.map(z => ({ zone_id: z.id, name: z.name, type: z.type, polygon: [[z.x0, z.z0], [z.x1, z.z0], [z.x1, z.z1], [z.x0, z.z1]] })),
       devices: SENSORS.map(s => ({ device_id: s.id, zone_id: s.zone, device_type: s.type, model: s.model, pos: { x: s.x, y: s.y, z: s.z } })) });
   }
   function connect() {
@@ -1578,20 +1741,20 @@ BUS.addEventListener('brigade', e => LINK.send(e.detail, true));
 // telemetry every 2 s, heartbeat every 10 s (silent devices are skipped: the server will notice)
 setInterval(() => {
   for (const s of SENSORS) if (!s.offline) {
-    const msg = { type: 'telemetry', schema: '1.0', ts: vnow(), site_id: 'office-01', simulated: true, seq: LINK.nextSeq(s.id),
+    const msg = { type: 'telemetry', schema: '1.0', ts: vnow(), site_id: SITE_ID, simulated: true, seq: LINK.nextSeq(s.id),
       zone_id: s.zone, device_id: s.id, device_type: s.type, model: s.model, values: valuesOf(s), state: s.state };
     LINK.send(msg); BUS.dispatchEvent(new CustomEvent('telemetry', { detail: msg }));
   }
 }, 2000);
-setInterval(() => LINK.send({ type: 'heartbeat', schema: '1.0', ts: vnow(), site_id: 'office-01', simulated: true,
+setInterval(() => LINK.send({ type: 'heartbeat', schema: '1.0', ts: vnow(), site_id: SITE_ID, simulated: true,
   devices: SENSORS.filter(s => !s.offline).map(s => ({ device_id: s.id, seq: LINK.nextSeq(s.id) })) }), 10000);
 const OCC_STATUS = { sit: 'idle', stand: 'alerted', walk: 'evacuating', out: 'evacuated', down: 'incapacitated' };
 const INJ = (f, st) => st === 'down' ? 'critical' : f < .1 ? 'none' : f < .3 ? 'light' : f < .6 ? 'moderate' : f < 1 ? 'severe' : 'critical';
 setInterval(() => PEOPLE.forEach((P, i) => {
   const p = P.pos, z = zoneAt(p.x, p.z), f = Math.max(P.fedCO, P.fedHeat);
-  LINK.send({ type: 'occupant', schema: '1.0', ts: vnow(), site_id: 'office-01', simulated: true,
-    occupant_id: 'P-' + String(i + 1).padStart(2, '0'), name: P.label, zone_id: z ? z.id : null, pos: { x: +p.x.toFixed(2), y: 0, z: +p.z.toFixed(2) },
-    status: P.state === 'sit' && P.alertAt !== null ? 'alerted' : OCC_STATUS[P.state],
+  LINK.send({ type: 'occupant', schema: '1.0', ts: vnow(), site_id: SITE_ID, simulated: true,
+    occupant_id: (SCN ? SITE_ID + '-' : '') + 'P-' + String(i + 1).padStart(2, '0'), name: P.label, zone_id: z ? z.id : null, pos: { x: +p.x.toFixed(2), y: 0, z: +p.z.toFixed(2) },
+    status: P.returning ? 'returning' : P.state === 'sit' && P.alertAt !== null ? 'alerted' : OCC_STATUS[P.state],
     exposure: z ? { co_ppm: +z.co.toFixed(0), temp_c: +z.temp.toFixed(1), visibility_m: +(z.smoke > .01 ? Math.min(30, 3 / (z.smoke * .23)) : 30).toFixed(1) } : null,
     fed_co: +P.fedCO.toFixed(3), fed_heat: +P.fedHeat.toFixed(3), injury: INJ(f, P.state) });
 }), 2000);
@@ -1617,10 +1780,15 @@ function onCommand(m) {
     case 'reset_device': { const s = SENSORS.find(q => q.id === m.device_id); if (s) { s.pressed = false; s.state = 'alarm'; s.state = '_'; setSensorState(s, 'normal'); log(`Команда: сброс ${s.id}`, 'e-info'); } else ok = false; break; }
     case 'run_test': log('Команда: тест оповещения', 'e-info'); SND?.voice('test'); sirenOn = true; setTimeout(() => { if (!evacuating) sirenOn = false; }, 3000); break;
     case 'reset_all': resetAll(); break;
+    case 'demo_scenario': { // presentation mode: clean start, then the first fast (non-false, non-gas) fire of this building
+      resetAll();
+      const h = HAZ.find(q => !q.slow && !q.aerosol && !q.gas) || HAZ[0];
+      setTimeout(() => { speed = 5; const sel = document.getElementById('selSpeed'); if (sel) sel.value = '5'; if (!h.active) toggleHazard(h); log(`Презентация: запущен сценарий «${h.name}»`, 'e-info'); }, 1500);
+      break; }
     case 'dispatch_brigade': startBrigade({ incident_id: m.incident_id ?? null, zone: (m.zones || [])[0], eta: m.eta_s, by }); break;
     default: ok = false;
   }
-  LINK.send({ type: 'ack', schema: '1.0', ts: new Date().toISOString(), site_id: 'office-01', simulated: true, command_id: m.command_id, ok });
+  LINK.send({ type: 'ack', schema: '1.0', ts: new Date().toISOString(), site_id: SITE_ID, simulated: true, command_id: m.command_id, ok });
 }
 </script>
 </body>

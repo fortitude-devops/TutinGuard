@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 *.db
+research/data/
+node_modules/
+frontend/web/node_modules/
+tiles/
+backend/tiles/

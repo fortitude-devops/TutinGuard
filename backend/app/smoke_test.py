@@ -68,7 +68,11 @@ async def main() -> int:
                 await ws.send(msg(type="event", event_id="smoke-" + dev, device_id=dev, zone_id="meet", event="alarm",
                                   category="smoke", prev_state="normal", state="alarm", value={"obscuration_db_m": 0.17}))
             await ws.send(json.dumps({"type": "telemetry", "site_id": "x"}))  # deliberately invalid
-            reply = json.loads(await asyncio.wait_for(ws.recv(), 5))
+            reply = {}
+            for _ in range(10):  # commands (e.g. the DEMO brigade) may arrive first
+                reply = json.loads(await asyncio.wait_for(ws.recv(), 5))
+                if reply.get("type") == "error":
+                    break
             check(reply.get("type") == "error", "некорректное сообщение отклонено с ошибкой")
         await asyncio.sleep(1)
 
@@ -81,8 +85,10 @@ async def main() -> int:
             check(r.status_code == 200 and r.json()["status"] == "acknowledged", "оператор принял инцидент")
             r = await c.post(f"/api/incidents/{i['id']}/close", headers=tech, json={"result": "test"})
             check(r.status_code == 403, "техник не может закрыть пожарный инцидент (роли работают)")
-            r = await c.post(f"/api/incidents/{i['id']}/dispatch", json={})
-            check(r.status_code == 200 and (r.json().get("brigade") or {}).get("status") == "called",
+            if not i.get("brigade"):  # AUTO_DISPATCH=confirmed already calls the brigade on confirmation
+                r = await c.post(f"/api/incidents/{i['id']}/dispatch", json={})
+                i = r.json() if r.status_code == 200 else i
+            check((i.get("brigade") or {}).get("status") in ("called", "en_route", "arrived", "attack", "extinguished"),
                   "вызов пожарных сформирован (DEMO, реальный вызов не отправляется)")
             r = await c.post(f"/api/incidents/{i['id']}/close", json={"actor": "smoke-test", "result": "test", "comment": "самопроверка"})
             check(r.status_code == 200 and r.json()["status"] == "closed", "инцидент закрыт с результатом «тест»")

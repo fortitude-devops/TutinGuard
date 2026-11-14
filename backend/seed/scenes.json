@@ -1,0 +1,1376 @@
+{
+ "school": {
+  "type": "hello",
+  "schema": "1.0",
+  "ts": "2026-11-14T00:40:11.358Z",
+  "site_id": "kzo-school-12",
+  "role": "simulator",
+  "simulated": true,
+  "session_id": "S-pvjs8t8w",
+  "site_name": "Школа-лицей №12 (демо)",
+  "site_kind": "school",
+  "zones": [
+   {
+    "zone_id": "sch-cls",
+    "name": "Класс 2-04",
+    "type": "classroom",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      6,
+      0
+     ],
+     [
+      6,
+      6
+     ],
+     [
+      0,
+      6
+     ]
+    ]
+   },
+   {
+    "zone_id": "sch-it",
+    "name": "Кабинет информатики",
+    "type": "classroom",
+    "polygon": [
+     [
+      6,
+      0
+     ],
+     [
+      14,
+      0
+     ],
+     [
+      14,
+      6
+     ],
+     [
+      6,
+      6
+     ]
+    ]
+   },
+   {
+    "zone_id": "sch-cor",
+    "name": "Коридор",
+    "type": "hall",
+    "polygon": [
+     [
+      0,
+      6
+     ],
+     [
+      14,
+      6
+     ],
+     [
+      14,
+      7.6
+     ],
+     [
+      0,
+      7.6
+     ]
+    ]
+   },
+   {
+    "zone_id": "sch-wc",
+    "name": "Туалет",
+    "type": "wc",
+    "polygon": [
+     [
+      0,
+      7.6
+     ],
+     [
+      3,
+      7.6
+     ],
+     [
+      3,
+      10
+     ],
+     [
+      0,
+      10
+     ]
+    ]
+   },
+   {
+    "zone_id": "sch-lob",
+    "name": "Вестибюль · охрана",
+    "type": "hall",
+    "polygon": [
+     [
+      3,
+      7.6
+     ],
+     [
+      8,
+      7.6
+     ],
+     [
+      8,
+      10
+     ],
+     [
+      3,
+      10
+     ]
+    ]
+   },
+   {
+    "zone_id": "sch-food",
+    "name": "Столовая",
+    "type": "kitchen",
+    "polygon": [
+     [
+      8,
+      7.6
+     ],
+     [
+      14,
+      7.6
+     ],
+     [
+      14,
+      10
+     ],
+     [
+      8,
+      10
+     ]
+    ]
+   }
+  ],
+  "devices": [
+   {
+    "device_id": "SCH-SMK-01",
+    "zone_id": "sch-cls",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 1.6,
+     "y": 2.86,
+     "z": 2
+    }
+   },
+   {
+    "device_id": "SCH-SMK-02",
+    "zone_id": "sch-cls",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 4.4,
+     "y": 2.86,
+     "z": 4.3
+    }
+   },
+   {
+    "device_id": "SCH-MLT-01",
+    "zone_id": "sch-cls",
+    "device_type": "multi",
+    "model": "Ajax FireProtect 2 (sim)",
+    "pos": {
+     "x": 3,
+     "y": 2.86,
+     "z": 3.2
+    }
+   },
+   {
+    "device_id": "SCH-SMK-03",
+    "zone_id": "sch-it",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 8.4,
+     "y": 2.86,
+     "z": 2
+    }
+   },
+   {
+    "device_id": "SCH-SMK-04",
+    "zone_id": "sch-it",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 12,
+     "y": 2.86,
+     "z": 4.2
+    }
+   },
+   {
+    "device_id": "SCH-MLT-02",
+    "zone_id": "sch-it",
+    "device_type": "multi",
+    "model": "Ajax FireProtect 2 (sim)",
+    "pos": {
+     "x": 10.2,
+     "y": 2.86,
+     "z": 3
+    }
+   },
+   {
+    "device_id": "SCH-SMK-05",
+    "zone_id": "sch-cor",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 3,
+     "y": 2.86,
+     "z": 6.8
+    }
+   },
+   {
+    "device_id": "SCH-SMK-06",
+    "zone_id": "sch-cor",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 10.5,
+     "y": 2.86,
+     "z": 6.8
+    }
+   },
+   {
+    "device_id": "SCH-SMK-07",
+    "zone_id": "sch-wc",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 1.5,
+     "y": 2.86,
+     "z": 8.8
+    }
+   },
+   {
+    "device_id": "SCH-SMK-08",
+    "zone_id": "sch-lob",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 5.5,
+     "y": 2.86,
+     "z": 8.8
+    }
+   },
+   {
+    "device_id": "SCH-SMK-09",
+    "zone_id": "sch-food",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 10,
+     "y": 2.86,
+     "z": 8.8
+    }
+   },
+   {
+    "device_id": "SCH-HT-01",
+    "zone_id": "sch-food",
+    "device_type": "heat",
+    "model": "С2000-ИП (sim)",
+    "pos": {
+     "x": 12.8,
+     "y": 2.86,
+     "z": 8.6
+    }
+   },
+   {
+    "device_id": "SCH-CO-01",
+    "zone_id": "sch-food",
+    "device_type": "gas_co",
+    "model": "Датчик CO (sim)",
+    "pos": {
+     "x": 13.885,
+     "y": 1.55,
+     "z": 9.5
+    }
+   },
+   {
+    "device_id": "SCH-MCP-01",
+    "zone_id": "sch-cor",
+    "device_type": "manual",
+    "model": "ИПР 513-3АМ (sim)",
+    "pos": {
+     "x": 0.115,
+     "y": 1.5,
+     "z": 7.48
+    }
+   },
+   {
+    "device_id": "SCH-MCP-02",
+    "zone_id": "sch-lob",
+    "device_type": "manual",
+    "model": "ИПР 513-3АМ (sim)",
+    "pos": {
+     "x": 7.3,
+     "y": 1.5,
+     "z": 9.885
+    }
+   },
+   {
+    "device_id": "SCH-PNL-01",
+    "zone_id": "sch-lob",
+    "device_type": "panel",
+    "model": "С2000М + С2000-КДЛ (sim)",
+    "pos": {
+     "x": 3.075,
+     "y": 1.5,
+     "z": 8.5
+    }
+   }
+  ]
+ },
+ "hospital": {
+  "type": "hello",
+  "schema": "1.0",
+  "ts": "2026-11-14T00:40:18.318Z",
+  "site_id": "kzo-hospital-1",
+  "role": "simulator",
+  "simulated": true,
+  "session_id": "S-3lpp4cnw",
+  "site_name": "Городская больница №1 · терапия (демо)",
+  "site_kind": "hospital",
+  "zones": [
+   {
+    "zone_id": "hsp-w1",
+    "name": "Палата 1",
+    "type": "ward",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      4.6,
+      0
+     ],
+     [
+      4.6,
+      5
+     ],
+     [
+      0,
+      5
+     ]
+    ]
+   },
+   {
+    "zone_id": "hsp-w2",
+    "name": "Палата 2",
+    "type": "ward",
+    "polygon": [
+     [
+      4.6,
+      0
+     ],
+     [
+      9.2,
+      0
+     ],
+     [
+      9.2,
+      5
+     ],
+     [
+      4.6,
+      5
+     ]
+    ]
+   },
+   {
+    "zone_id": "hsp-proc",
+    "name": "Процедурная",
+    "type": "office",
+    "polygon": [
+     [
+      9.2,
+      0
+     ],
+     [
+      14,
+      0
+     ],
+     [
+      14,
+      5
+     ],
+     [
+      9.2,
+      5
+     ]
+    ]
+   },
+   {
+    "zone_id": "hsp-cor",
+    "name": "Коридор",
+    "type": "hall",
+    "polygon": [
+     [
+      0,
+      5
+     ],
+     [
+      14,
+      5
+     ],
+     [
+      14,
+      6.8
+     ],
+     [
+      0,
+      6.8
+     ]
+    ]
+   },
+   {
+    "zone_id": "hsp-w3",
+    "name": "Палата 3",
+    "type": "ward",
+    "polygon": [
+     [
+      0,
+      6.8
+     ],
+     [
+      5,
+      6.8
+     ],
+     [
+      5,
+      10
+     ],
+     [
+      0,
+      10
+     ]
+    ]
+   },
+   {
+    "zone_id": "hsp-post",
+    "name": "Пост медсестры · выход",
+    "type": "hall",
+    "polygon": [
+     [
+      5,
+      6.8
+     ],
+     [
+      9.5,
+      6.8
+     ],
+     [
+      9.5,
+      10
+     ],
+     [
+      5,
+      10
+     ]
+    ]
+   },
+   {
+    "zone_id": "hsp-sup",
+    "name": "Подсобка · кислород",
+    "type": "storage",
+    "polygon": [
+     [
+      9.5,
+      6.8
+     ],
+     [
+      14,
+      6.8
+     ],
+     [
+      14,
+      10
+     ],
+     [
+      9.5,
+      10
+     ]
+    ]
+   }
+  ],
+  "devices": [
+   {
+    "device_id": "HSP-SMK-01",
+    "zone_id": "hsp-w1",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 2.3,
+     "y": 2.86,
+     "z": 2.6
+    }
+   },
+   {
+    "device_id": "HSP-SMK-02",
+    "zone_id": "hsp-w2",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 6.9,
+     "y": 2.86,
+     "z": 2.6
+    }
+   },
+   {
+    "device_id": "HSP-SMK-03",
+    "zone_id": "hsp-proc",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 11.6,
+     "y": 2.86,
+     "z": 2
+    }
+   },
+   {
+    "device_id": "HSP-HT-01",
+    "zone_id": "hsp-proc",
+    "device_type": "heat",
+    "model": "С2000-ИП (sim)",
+    "pos": {
+     "x": 12.8,
+     "y": 2.86,
+     "z": 2.4
+    }
+   },
+   {
+    "device_id": "HSP-SMK-04",
+    "zone_id": "hsp-cor",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 3.2,
+     "y": 2.86,
+     "z": 5.9
+    }
+   },
+   {
+    "device_id": "HSP-SMK-05",
+    "zone_id": "hsp-cor",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 10.5,
+     "y": 2.86,
+     "z": 5.9
+    }
+   },
+   {
+    "device_id": "HSP-SMK-06",
+    "zone_id": "hsp-w3",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 2.5,
+     "y": 2.86,
+     "z": 8
+    }
+   },
+   {
+    "device_id": "HSP-MLT-01",
+    "zone_id": "hsp-w3",
+    "device_type": "multi",
+    "model": "Ajax FireProtect 2 (sim)",
+    "pos": {
+     "x": 2.5,
+     "y": 2.86,
+     "z": 9.2
+    }
+   },
+   {
+    "device_id": "HSP-SMK-07",
+    "zone_id": "hsp-post",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 7.2,
+     "y": 2.86,
+     "z": 8.8
+    }
+   },
+   {
+    "device_id": "HSP-SMK-08",
+    "zone_id": "hsp-sup",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 11.8,
+     "y": 2.86,
+     "z": 8.4
+    }
+   },
+   {
+    "device_id": "HSP-HT-02",
+    "zone_id": "hsp-sup",
+    "device_type": "heat",
+    "model": "С2000-ИП (sim)",
+    "pos": {
+     "x": 12.6,
+     "y": 2.86,
+     "z": 9.3
+    }
+   },
+   {
+    "device_id": "HSP-MCP-01",
+    "zone_id": "hsp-cor",
+    "device_type": "manual",
+    "model": "ИПР 513-3АМ (sim)",
+    "pos": {
+     "x": 13.885,
+     "y": 1.5,
+     "z": 6.7
+    }
+   },
+   {
+    "device_id": "HSP-MCP-02",
+    "zone_id": "hsp-post",
+    "device_type": "manual",
+    "model": "ИПР 513-3АМ (sim)",
+    "pos": {
+     "x": 7.3,
+     "y": 1.5,
+     "z": 9.885
+    }
+   },
+   {
+    "device_id": "HSP-PNL-01",
+    "zone_id": "hsp-post",
+    "device_type": "panel",
+    "model": "С2000М + С2000-КДЛ (sim)",
+    "pos": {
+     "x": 5.065,
+     "y": 1.5,
+     "z": 9.1
+    }
+   }
+  ]
+ },
+ "mall": {
+  "type": "hello",
+  "schema": "1.0",
+  "ts": "2026-11-14T00:40:25.425Z",
+  "site_id": "kzo-mall-1",
+  "role": "simulator",
+  "simulated": true,
+  "session_id": "S-bgb3lqkf",
+  "site_name": "ТРЦ «Сырдария» · секция 1 этажа (демо)",
+  "site_kind": "mall",
+  "zones": [
+   {
+    "zone_id": "mal-food",
+    "name": "Фудкорт",
+    "type": "food",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      6,
+      0
+     ],
+     [
+      6,
+      6
+     ],
+     [
+      0,
+      6
+     ]
+    ]
+   },
+   {
+    "zone_id": "mal-cloth",
+    "name": "Магазин одежды",
+    "type": "shop",
+    "polygon": [
+     [
+      6,
+      0
+     ],
+     [
+      10,
+      0
+     ],
+     [
+      10,
+      6
+     ],
+     [
+      6,
+      6
+     ]
+    ]
+   },
+   {
+    "zone_id": "mal-elec",
+    "name": "Электроника",
+    "type": "shop",
+    "polygon": [
+     [
+      10,
+      0
+     ],
+     [
+      14,
+      0
+     ],
+     [
+      14,
+      6
+     ],
+     [
+      10,
+      6
+     ]
+    ]
+   },
+   {
+    "zone_id": "mal-gal",
+    "name": "Галерея",
+    "type": "hall",
+    "polygon": [
+     [
+      0,
+      6
+     ],
+     [
+      14,
+      6
+     ],
+     [
+      14,
+      7.6
+     ],
+     [
+      0,
+      7.6
+     ]
+    ]
+   },
+   {
+    "zone_id": "mal-kit",
+    "name": "Кухня фудкорта",
+    "type": "kitchen",
+    "polygon": [
+     [
+      0,
+      7.6
+     ],
+     [
+      4,
+      7.6
+     ],
+     [
+      4,
+      10
+     ],
+     [
+      0,
+      10
+     ]
+    ]
+   },
+   {
+    "zone_id": "mal-ent",
+    "name": "Вход · атриум",
+    "type": "hall",
+    "polygon": [
+     [
+      4,
+      7.6
+     ],
+     [
+      10,
+      7.6
+     ],
+     [
+      10,
+      10
+     ],
+     [
+      4,
+      10
+     ]
+    ]
+   },
+   {
+    "zone_id": "mal-stor",
+    "name": "Склад магазина",
+    "type": "storage",
+    "polygon": [
+     [
+      10,
+      7.6
+     ],
+     [
+      14,
+      7.6
+     ],
+     [
+      14,
+      10
+     ],
+     [
+      10,
+      10
+     ]
+    ]
+   }
+  ],
+  "devices": [
+   {
+    "device_id": "MAL-SMK-01",
+    "zone_id": "mal-food",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 1.5,
+     "y": 2.86,
+     "z": 1.8
+    }
+   },
+   {
+    "device_id": "MAL-SMK-02",
+    "zone_id": "mal-food",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 4.5,
+     "y": 2.86,
+     "z": 4.2
+    }
+   },
+   {
+    "device_id": "MAL-MLT-01",
+    "zone_id": "mal-food",
+    "device_type": "multi",
+    "model": "Ajax FireProtect 2 (sim)",
+    "pos": {
+     "x": 3,
+     "y": 2.86,
+     "z": 3
+    }
+   },
+   {
+    "device_id": "MAL-SMK-03",
+    "zone_id": "mal-cloth",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 8,
+     "y": 2.86,
+     "z": 2.5
+    }
+   },
+   {
+    "device_id": "MAL-MLT-02",
+    "zone_id": "mal-cloth",
+    "device_type": "multi",
+    "model": "Ajax FireProtect 2 (sim)",
+    "pos": {
+     "x": 8,
+     "y": 2.86,
+     "z": 4.4
+    }
+   },
+   {
+    "device_id": "MAL-SMK-04",
+    "zone_id": "mal-elec",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 12,
+     "y": 2.86,
+     "z": 2
+    }
+   },
+   {
+    "device_id": "MAL-MLT-03",
+    "zone_id": "mal-elec",
+    "device_type": "multi",
+    "model": "Ajax FireProtect 2 (sim)",
+    "pos": {
+     "x": 12,
+     "y": 2.86,
+     "z": 4
+    }
+   },
+   {
+    "device_id": "MAL-SMK-05",
+    "zone_id": "mal-gal",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 3,
+     "y": 2.86,
+     "z": 6.8
+    }
+   },
+   {
+    "device_id": "MAL-SMK-06",
+    "zone_id": "mal-gal",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 11,
+     "y": 2.86,
+     "z": 6.8
+    }
+   },
+   {
+    "device_id": "MAL-SMK-07",
+    "zone_id": "mal-kit",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 2,
+     "y": 2.86,
+     "z": 8.8
+    }
+   },
+   {
+    "device_id": "MAL-HT-01",
+    "zone_id": "mal-kit",
+    "device_type": "heat",
+    "model": "С2000-ИП (sim)",
+    "pos": {
+     "x": 1,
+     "y": 2.86,
+     "z": 9
+    }
+   },
+   {
+    "device_id": "MAL-CO-01",
+    "zone_id": "mal-kit",
+    "device_type": "gas_co",
+    "model": "Датчик CO (sim)",
+    "pos": {
+     "x": 0.115,
+     "y": 1.55,
+     "z": 8.2
+    }
+   },
+   {
+    "device_id": "MAL-SMK-08",
+    "zone_id": "mal-ent",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 7,
+     "y": 2.86,
+     "z": 8.8
+    }
+   },
+   {
+    "device_id": "MAL-SMK-09",
+    "zone_id": "mal-stor",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 12,
+     "y": 2.86,
+     "z": 8.8
+    }
+   },
+   {
+    "device_id": "MAL-HT-02",
+    "zone_id": "mal-stor",
+    "device_type": "heat",
+    "model": "С2000-ИП (sim)",
+    "pos": {
+     "x": 12.8,
+     "y": 2.86,
+     "z": 9.4
+    }
+   },
+   {
+    "device_id": "MAL-MCP-01",
+    "zone_id": "mal-food",
+    "device_type": "manual",
+    "model": "ИПР 513-3АМ (sim)",
+    "pos": {
+     "x": 3.3,
+     "y": 1.5,
+     "z": 0.115
+    }
+   },
+   {
+    "device_id": "MAL-MCP-02",
+    "zone_id": "mal-ent",
+    "device_type": "manual",
+    "model": "ИПР 513-3АМ (sim)",
+    "pos": {
+     "x": 7.3,
+     "y": 1.5,
+     "z": 9.885
+    }
+   },
+   {
+    "device_id": "MAL-PNL-01",
+    "zone_id": "mal-ent",
+    "device_type": "panel",
+    "model": "С2000М + С2000-КДЛ (sim)",
+    "pos": {
+     "x": 9.935,
+     "y": 1.5,
+     "z": 9
+    }
+   }
+  ]
+ },
+ "dorm": {
+  "type": "hello",
+  "schema": "1.0",
+  "ts": "2026-11-14T00:40:32.987Z",
+  "site_id": "kzo-dorm-3",
+  "role": "simulator",
+  "simulated": true,
+  "session_id": "S-5blh7znm",
+  "site_name": "Общежитие №3 · 1 этаж (демо)",
+  "site_kind": "residential",
+  "zones": [
+   {
+    "zone_id": "drm-r1",
+    "name": "Комната 101",
+    "type": "room",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      4.6,
+      0
+     ],
+     [
+      4.6,
+      5
+     ],
+     [
+      0,
+      5
+     ]
+    ]
+   },
+   {
+    "zone_id": "drm-r2",
+    "name": "Комната 102",
+    "type": "room",
+    "polygon": [
+     [
+      4.6,
+      0
+     ],
+     [
+      9.3,
+      0
+     ],
+     [
+      9.3,
+      5
+     ],
+     [
+      4.6,
+      5
+     ]
+    ]
+   },
+   {
+    "zone_id": "drm-r3",
+    "name": "Комната 103",
+    "type": "room",
+    "polygon": [
+     [
+      9.3,
+      0
+     ],
+     [
+      14,
+      0
+     ],
+     [
+      14,
+      5
+     ],
+     [
+      9.3,
+      5
+     ]
+    ]
+   },
+   {
+    "zone_id": "drm-cor",
+    "name": "Коридор",
+    "type": "hall",
+    "polygon": [
+     [
+      0,
+      5
+     ],
+     [
+      14,
+      5
+     ],
+     [
+      14,
+      6.6
+     ],
+     [
+      0,
+      6.6
+     ]
+    ]
+   },
+   {
+    "zone_id": "drm-kit",
+    "name": "Общая кухня",
+    "type": "kitchen",
+    "polygon": [
+     [
+      0,
+      6.6
+     ],
+     [
+      5,
+      6.6
+     ],
+     [
+      5,
+      10
+     ],
+     [
+      0,
+      10
+     ]
+    ]
+   },
+   {
+    "zone_id": "drm-hall",
+    "name": "Холл · вахта",
+    "type": "hall",
+    "polygon": [
+     [
+      5,
+      6.6
+     ],
+     [
+      9.5,
+      6.6
+     ],
+     [
+      9.5,
+      10
+     ],
+     [
+      5,
+      10
+     ]
+    ]
+   },
+   {
+    "zone_id": "drm-laun",
+    "name": "Прачечная",
+    "type": "laundry",
+    "polygon": [
+     [
+      9.5,
+      6.6
+     ],
+     [
+      14,
+      6.6
+     ],
+     [
+      14,
+      10
+     ],
+     [
+      9.5,
+      10
+     ]
+    ]
+   }
+  ],
+  "devices": [
+   {
+    "device_id": "DRM-SMK-01",
+    "zone_id": "drm-r1",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 2.3,
+     "y": 2.86,
+     "z": 2.8
+    }
+   },
+   {
+    "device_id": "DRM-MLT-01",
+    "zone_id": "drm-r1",
+    "device_type": "multi",
+    "model": "Ajax FireProtect 2 (sim)",
+    "pos": {
+     "x": 2.3,
+     "y": 2.86,
+     "z": 1.4
+    }
+   },
+   {
+    "device_id": "DRM-SMK-02",
+    "zone_id": "drm-r2",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 7,
+     "y": 2.86,
+     "z": 2.8
+    }
+   },
+   {
+    "device_id": "DRM-MLT-02",
+    "zone_id": "drm-r2",
+    "device_type": "multi",
+    "model": "Ajax FireProtect 2 (sim)",
+    "pos": {
+     "x": 7,
+     "y": 2.86,
+     "z": 1.4
+    }
+   },
+   {
+    "device_id": "DRM-SMK-03",
+    "zone_id": "drm-r3",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 11.6,
+     "y": 2.86,
+     "z": 2.5
+    }
+   },
+   {
+    "device_id": "DRM-SMK-04",
+    "zone_id": "drm-cor",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 3,
+     "y": 2.86,
+     "z": 5.8
+    }
+   },
+   {
+    "device_id": "DRM-SMK-05",
+    "zone_id": "drm-cor",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 11,
+     "y": 2.86,
+     "z": 5.8
+    }
+   },
+   {
+    "device_id": "DRM-SMK-06",
+    "zone_id": "drm-kit",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 2.5,
+     "y": 2.86,
+     "z": 8
+    }
+   },
+   {
+    "device_id": "DRM-HT-01",
+    "zone_id": "drm-kit",
+    "device_type": "heat",
+    "model": "С2000-ИП (sim)",
+    "pos": {
+     "x": 1.5,
+     "y": 2.86,
+     "z": 9.2
+    }
+   },
+   {
+    "device_id": "DRM-SMK-07",
+    "zone_id": "drm-hall",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 7.2,
+     "y": 2.86,
+     "z": 8.4
+    }
+   },
+   {
+    "device_id": "DRM-SMK-08",
+    "zone_id": "drm-laun",
+    "device_type": "smoke",
+    "model": "ДИП-34А (sim)",
+    "pos": {
+     "x": 11.8,
+     "y": 2.86,
+     "z": 8.4
+    }
+   },
+   {
+    "device_id": "DRM-HT-02",
+    "zone_id": "drm-laun",
+    "device_type": "heat",
+    "model": "С2000-ИП (sim)",
+    "pos": {
+     "x": 13,
+     "y": 2.86,
+     "z": 7.6
+    }
+   },
+   {
+    "device_id": "DRM-MCP-01",
+    "zone_id": "drm-cor",
+    "device_type": "manual",
+    "model": "ИПР 513-3АМ (sim)",
+    "pos": {
+     "x": 13.885,
+     "y": 1.5,
+     "z": 6.55
+    }
+   },
+   {
+    "device_id": "DRM-MCP-02",
+    "zone_id": "drm-hall",
+    "device_type": "manual",
+    "model": "ИПР 513-3АМ (sim)",
+    "pos": {
+     "x": 7.3,
+     "y": 1.5,
+     "z": 9.885
+    }
+   },
+   {
+    "device_id": "DRM-PNL-01",
+    "zone_id": "drm-hall",
+    "device_type": "panel",
+    "model": "С2000М + С2000-КДЛ (sim)",
+    "pos": {
+     "x": 9.435,
+     "y": 1.5,
+     "z": 9.1
+    }
+   }
+  ]
+ }
+}

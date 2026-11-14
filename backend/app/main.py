@@ -14,13 +14,16 @@ import csv
 import io
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm.attributes import flag_modified
 from pydantic import ValidationError
 from sqlalchemy import delete, func, select
 from starlette.concurrency import run_in_threadpool
 
 from . import auth as A
+from . import city as C
+from . import tiles as TILES
 from . import db as M
 from . import logic as L
 from . import schemas as S
@@ -96,6 +99,50 @@ def seed(s):
             s.add(M.Inspection(device_id=d["device_id"], due_date=today - timedelta(days=5) if i in (3, 9) else nc))
         log.info("Seeded site %s with %d devices (test data)", data["site_id"], len(data["devices"]))
     s.commit()
+    C.seed_city(s)
+    seed_scenes(s)
+
+
+SCENES_FILE = SEED_FILE.parent / "scenes.json"
+# second floor of the school: plan-only zones (the 3D scene models floor 1), to show multi-floor navigation
+SCHOOL_F2 = [("sch2-a", "Класс 3-01", "classroom", [[0, 0], [7, 0], [7, 6], [0, 6]]), ("sch2-b", "Класс 3-02", "classroom", [[7, 0], [14, 0], [14, 6], [7, 6]]),
+             ("sch2-cor", "Коридор 2 этажа", "hall", [[0, 6], [14, 6], [14, 7.6], [0, 7.6]]), ("sch2-lab", "Кабинет химии", "classroom", [[0, 7.6], [6, 7.6], [6, 10], [0, 10]]),
+             ("sch2-lib", "Библиотека", "room", [[6, 7.6], [14, 7.6], [14, 10], [6, 10]])]
+
+
+def seed_scenes(s):
+    """Zones and detectors of the four 3D scenes, so the objects are complete before their scene is first opened."""
+    if not SCENES_FILE.exists():
+        return
+    today = date.today()
+    for sc in json.loads(SCENES_FILE.read_text(encoding="utf-8")).values():
+        site = s.get(M.Site, sc["site_id"])
+        if site is None or s.scalar(select(func.count()).select_from(M.Zone).where(M.Zone.site_id == site.id)):
+            continue
+        for z in sc["zones"]:
+            s.add(M.Zone(id=z["zone_id"], site_id=site.id, name=z["name"], floor=1, type=z.get("type") or "room", polygon=z["polygon"]))
+        for i, d in enumerate(sc["devices"]):
+            if s.get(M.Device, d["device_id"]):
+                continue
+            nc = today + timedelta(days=20 + 3 * i)
+            s.add(M.Device(id=d["device_id"], site_id=site.id, zone_id=d["zone_id"], device_type=d["device_type"], model=d.get("model", ""),
+                           pos=d.get("pos"), next_check=nc, state="normal"))
+            s.add(M.Inspection(device_id=d["device_id"], due_date=nc))
+        if site.id == "kzo-school-12":
+            site.floors = 2
+            for zid, name, typ, poly in SCHOOL_F2:
+                s.add(M.Zone(id=zid, site_id=site.id, name=name, floor=2, type=typ, polygon=poly))
+            n = 0
+            for zid, name, typ, poly in SCHOOL_F2:
+                (x0, z0), (x1, z1) = poly[0], poly[2]
+                for k, typ_d in enumerate(["smoke", "smoke"] if (x1 - x0) * (z1 - z0) > 20 else ["smoke"]):
+                    n += 1
+                    did = f"SCH2-SMK-{n:02d}"
+                    x = x0 + (x1 - x0) * (0.3 + 0.4 * k) if typ_d else 0
+                    s.add(M.Device(id=did, site_id=site.id, zone_id=zid, device_type="smoke", model="ДИП-34А (только план)",
+                                   pos={"x": round(x, 2), "y": 2.86, "z": round((z0 + z1) / 2, 2)}, next_check=today + timedelta(days=40 + n), state="normal"))
+        log.info("Seeded scene object %s: %d zones, %d devices", site.id, len(sc["zones"]), len(sc["devices"]))
+    s.commit()
 
 
 async def background():
@@ -106,6 +153,7 @@ async def background():
         try:
             await hub.dispatch(await run_db(L.check_offline))
             await hub.dispatch(await run_db(L.check_escalation))
+            await hub.dispatch(await run_db(L.check_requery))
             await hub.dispatch(await run_db(L.ai_tick, predictor))  # AI forecast every 5 s (in-memory buffers, cheap)
             if tick % 120 == 0:  # every 10 minutes
                 def prune(s):
@@ -136,7 +184,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
-APP_BUILD = "0.3.0"
+APP_BUILD = "0.5.0"
 app = FastAPI(title="TutinGuard API", version=APP_BUILD, lifespan=lifespan)
 
 
@@ -178,6 +226,41 @@ async def ws_ingest(ws: WebSocket, token: str = ""):
         hub.sim.discard(ws)
         log.info("simulator disconnected (%d)", len(hub.sim))
         await hub.status()
+
+
+@app.get("/tiles/{style}/{z}/{x}/{y}.png")
+async def tile(style: str, z: int, x: int, y: int):
+    data = await run_in_threadpool(TILES.get, style, z, x, y)
+    if data is None:
+        raise HTTPException(404, "tile not cached and upstream unreachable")
+    return Response(content=data, media_type="image/png", headers={"Cache-Control": "public, max-age=604800"})
+
+
+@app.post("/api/ingest")
+async def http_ingest(body: dict, token: str = "", x_ingest_token: str | None = Header(None)):
+    """Plain-HTTP ingest for microcontrollers (ESP32 stand, see hardware/esp32). One reading or {"items": [...]}.
+    A reading: {"site_id", "device_id", "device_type"?, "zone_id"?, "values": {"smoke_raw", "temp_c", "flame", ...}}.
+    Raw values are evaluated on the server (adaptive baseline, warm-up, range check) — the device needs no thresholds."""
+    if INGEST_TOKEN and INGEST_TOKEN not in (token, x_ingest_token):
+        raise HTTPException(401, "bad ingest token")
+    items = body.get("items") if isinstance(body.get("items"), list) else [body]
+    n = 0
+    for it in items[:50]:
+        def known(s, it=it):
+            d = s.get(M.Device, str(it.get("device_id", "")))
+            return (d.site_id, d.zone_id, d.device_type, d.model) if d else None
+        k = await run_db(known)
+        try:
+            msg = S.Telemetry(type="telemetry", site_id=it.get("site_id") or (k[0] if k else "office-01"), device_id=str(it["device_id"]),
+                              zone_id=it.get("zone_id") or (k[1] if k else None), device_type=it.get("device_type") or (k[2] if k else "multi"),
+                              model=it.get("model") or (k[3] if k else "ESP32 stand"), seq=int(it.get("seq", 0)), values=it.get("values") or {},
+                              raw=True, simulated=False)
+        except (KeyError, ValidationError, TypeError, ValueError) as e:
+            raise HTTPException(422, f"bad reading: {e}")
+        hub.stats["received"] += 1
+        await hub.dispatch(await run_db(L.handle_message, msg))
+        n += 1
+    return {"ok": True, "accepted": n}
 
 
 @app.websocket("/ws/ui")
@@ -244,7 +327,8 @@ def site_dict(s, site: M.Site, full: bool = False) -> dict:
     resp = s.get(M.User, site.responsible_id) if site.responsible_id else None
     d = {"site_id": site.id, "name": site.name, "address": site.address, "alert_type": site.alert_type, "kind": site.kind,
          "floors": site.floors, "responsible": A.user_dict(resp) if resp else None, "responsible_id": site.responsible_id,
-         "session_started_at": L.iso(site.session_started_at),
+         "session_started_at": L.iso(site.session_started_at), "passport": site.passport or None,
+         "city": site.city, "district": site.district, "lat": site.lat, "lon": site.lon,
          "zones_count": len(zones), "devices_count": len(devs),
          "devices_offline": sum(x.state == "offline" for x in devs), "devices_alarm": sum(x.state == "alarm" for x in devs),
          "open_incidents": s.scalar(select(func.count()).select_from(M.Incident).where(M.Incident.site_id == site.id,
@@ -310,6 +394,8 @@ async def patch_site(site_id: str, body: S.SitePatch, u: dict = REG_ROLE):
         site = _get(s, M.Site, site_id, "объект")
         for k, v in body.model_dump(exclude_unset=True).items():
             setattr(site, k, v)
+        if site.passport is not None:
+            flag_modified(site, "passport")
         s.commit()
         return site_dict(s, site, True)
     data = await run_db(f)
@@ -729,6 +815,77 @@ async def export_journal(days: int = 30, u: dict = USER):
         return [[r.incident_id, L.iso(r.ts), r.actor, r.action, r.comment] for r in rows]
     rows = await run_db(f)
     return _csv(rows, ["инцидент", "время", "кто", "действие", "комментарий"], "tutinguard_journal.csv")
+
+
+# ---------------- city monitoring centre ----------------
+CITY_ROLE = Depends(A.require("dispatcher", "admin", "responsible", "operator"))
+
+
+@app.get("/api/city/overview")
+async def city_overview(days: int = Query(365, ge=1, le=1100), district: str | None = None, u: dict = CITY_ROLE):
+    return await run_db(C.overview, days, district)
+
+
+@app.get("/api/city/objects")
+async def city_objects(u: dict = CITY_ROLE):
+    return await run_db(C.objects)
+
+
+@app.get("/api/city/stations")
+async def city_stations(u: dict = CITY_ROLE):
+    return await run_db(C.stations)
+
+
+@app.get("/api/city/hydrants")
+async def city_hydrants(u: dict = USER):
+    return await run_db(C.hydrants)
+
+
+@app.get("/api/city/fires")
+async def city_fires(days: int = Query(365, ge=1, le=1100), cause: str | None = None, kind: str | None = None, district: str | None = None,
+                     limit: int = Query(2000, le=5000), u: dict = CITY_ROLE):
+    def f(s):
+        q = select(M.FireRecord).where(M.FireRecord.call_at >= utcnow() - timedelta(days=days))
+        if cause:
+            q = q.where(M.FireRecord.cause == cause)
+        if kind:
+            q = q.where(M.FireRecord.object_kind == kind)
+        if district:
+            q = q.where(M.FireRecord.district == district)
+        return [C.fire_dict(r) for r in s.scalars(q.order_by(M.FireRecord.call_at.desc()).limit(limit)).all()]
+    return await run_db(f)
+
+
+@app.get("/api/city/fires/{fire_id}")
+async def city_fire(fire_id: int, u: dict = CITY_ROLE):
+    return await run_db(lambda s: C.fire_dict(_get(s, M.FireRecord, fire_id, "пожар"), full=True))
+
+
+@app.post("/api/city/fires/{fire_id}/protocol")
+async def city_protocol(fire_id: int, u: dict = CITY_ROLE):
+    d = await run_db(lambda s: C.fire_dict(_get(s, M.FireRecord, fire_id, "пожар"), full=True))
+    text, engine = await run_in_threadpool(C.protocol_text, d)
+
+    def save(s):
+        r = s.get(M.FireRecord, fire_id)
+        r.protocol_text = text
+        s.commit()
+    await run_db(save)
+    return {"text": text, "engine": engine}
+
+
+@app.get("/api/city/llm")
+async def city_llm(u: dict = CITY_ROLE):
+    ok = await run_in_threadpool(C.llm_available)
+    return {"available": ok, "model": C.OLLAMA_MODEL if ok else None, "url_set": bool(C.OLLAMA_URL)}
+
+
+@app.post("/api/city/ask")
+async def city_ask(body: dict, u: dict = CITY_ROLE):
+    q = str(body.get("question", ""))[:500]
+    ov = await run_db(C.overview, int(body.get("days", 365)), None)
+    text, engine = await run_in_threadpool(C.ask, q, ov)
+    return {"answer": text, "engine": engine}
 
 
 # ---------------- AI forecast ----------------

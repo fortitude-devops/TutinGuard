@@ -50,7 +50,7 @@ class Event(Msg):
     device_id: str
     zone_id: str | None = None
     event: Literal["pre_alarm", "alarm", "restore", "fault", "fault_cleared", "service_needed",
-                   "manual_call", "test", "tamper"]
+                   "manual_call", "test", "tamper", "fire_confirmed"]
     category: str = ""
     prev_state: str | None = None
     state: str = "normal"
@@ -111,7 +111,7 @@ class IncidentAction(BaseModel):
 class CommandIn(BaseModel):
     site_id: str = "office-01"
     action: Literal["siren_on", "siren_off", "evacuation_on", "unlock_exits", "reset_device", "run_test", "reset_all",
-                    "dispatch_brigade"]
+                    "dispatch_brigade", "demo_scenario"]
     zones: list[str] = []
     device_id: str | None = None
     incident_id: int | None = None
@@ -139,7 +139,18 @@ class SiteIn(BaseModel):
     responsible_id: int | None = None
 
 
+class Passport(BaseModel):
+    entrances: list[str] = Field(default_factory=list, max_length=20)
+    hydrants: list[str] = Field(default_factory=list, max_length=20)
+    shutoffs: list[str] = Field(default_factory=list, max_length=20)
+    hazards: list[str] = Field(default_factory=list, max_length=20)
+    vulnerable: list[str] = Field(default_factory=list, max_length=20)
+    contacts: list[str] = Field(default_factory=list, max_length=20)
+    notes: str = Field("", max_length=2000)
+
+
 class SitePatch(BaseModel):
+    passport: Passport | None = None
     name: str | None = None
     address: str | None = None
     kind: str | None = None

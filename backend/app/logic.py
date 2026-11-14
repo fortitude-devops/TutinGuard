@@ -9,16 +9,18 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from . import city as C
 from . import db as M
 from . import schemas as S
 from .ai import buffer as AIBUF
+from .quality import Q, RANGES as QRANGES, WARMUP_S
 from .db import utcnow
 
 OFFLINE_SECONDS = int(os.getenv("OFFLINE_SECONDS", "30"))
 ESCALATE_SECONDS = int(os.getenv("ESCALATE_SECONDS", "60"))
 FALSE_ALARM_LIMIT = int(os.getenv("FALSE_ALARM_LIMIT", "3"))
 BRIGADE_ETA_S = int(os.getenv("BRIGADE_ETA_S", "45"))   # simulated travel time of the DEMO fire brigade (sim seconds)
-AUTO_DISPATCH = os.getenv("AUTO_DISPATCH", "escalation")  # escalation | confirmed | off
+AUTO_DISPATCH = os.getenv("AUTO_DISPATCH", "confirmed")  # confirmed | escalation | off
 BRIGADE_RU = {"called": "вызвана (DEMO)", "en_route": "в пути", "arrived": "прибыла", "attack": "тушение",
               "extinguished": "пожар ликвидирован", "returning": "убывает"}
 
@@ -46,7 +48,7 @@ def secs(a, b) -> float:
 def dev_dict(d: M.Device) -> dict:
     return {"device_id": d.id, "site_id": d.site_id, "zone_id": d.zone_id, "device_type": d.device_type, "model": d.model,
             "pos": d.pos, "state": d.state, "last_seen": iso(d.last_seen), "last_values": d.last_values,
-            "next_check": iso(d.next_check), "suspicious": d.suspicious, "false_alarms": d.false_alarms}
+            "next_check": iso(d.next_check), "suspicious": d.suspicious, "false_alarms": d.false_alarms, "quality": Q.info(d.id)}
 
 
 def inc_dict(i: M.Incident, logs: list[M.IncidentLog] | None = None) -> dict:
@@ -119,8 +121,10 @@ def get_device(s: Session, site_id: str, device_id: str, zone_id=None, device_ty
     return d
 
 
-def restore_link(s: Session, d: M.Device, new_state: str, out: Out):
+def restore_link(s: Session, d: M.Device, new_state: str, out: Out, warm: bool = True):
     d.state = new_state if new_state != "offline" else "normal"
+    if warm:  # a physical sensor needs time after power/link loss; a simulated one does not
+        Q.start_warmup(d.id)
     e = add_event(s, d.site_id, "link_restored", device_id=d.id, zone_id=d.zone_id, category=d.device_type,
                   state=d.state, prev_state="offline")
     out += [("ui", {"type": "device", "data": dev_dict(d)}), ("ui", {"type": "event", "data": ev_dict(e)})]
@@ -140,24 +144,52 @@ def restore_link(s: Session, d: M.Device, new_state: str, out: Out):
 
 # ---------------- incidents ----------------
 def raise_incident(s: Session, site_id: str, zone_id: str | None, kind: str, device_id: str, category: str, out: Out,
-                   vts=None):
+                   vts=None, suspect: bool = False):
     inc = s.scalar(select(M.Incident).where(M.Incident.site_id == site_id, M.Incident.zone_id == zone_id,
-                                            M.Incident.kind == kind, M.Incident.status.in_(OPEN)))
+                                            M.Incident.kind == kind, M.Incident.status.in_(OPEN), _not_finished()))
+    if inc is None and kind == "fire":
+        # smoke spreading from an ongoing fire is the same event: attach it to the first (origin) incident on the site
+        origin = s.scalar(select(M.Incident).where(M.Incident.site_id == site_id, M.Incident.kind == "fire", M.Incident.status.in_(OPEN),
+                                                   M.Incident.opened_at > utcnow() - timedelta(minutes=60), _not_finished()).order_by(M.Incident.id))
+        if origin is not None:
+            z = s.get(M.Zone, zone_id) if zone_id else None
+            ids = list(origin.device_ids or [])
+            if device_id not in ids:
+                ids.append(device_id)
+                origin.device_ids = ids
+            origin.repeat_count += 1
+            log_incident(s, origin, "spread", f"сигнал из зоны «{z.name if z else zone_id}»: {device_id} — распространение дыма")
+            if origin.level == "attention" and len(ids) >= 2:
+                origin.level, origin.level_at = "fire", utcnow()
+                log_incident(s, origin, "confirmed", f"подтверждено {len(ids)} извещателями (в т.ч. в соседних зонах)")
+                _city(s, origin, out)
+                if AUTO_DISPATCH == "confirmed" and not origin.brigade_status:
+                    out += dispatch_brigade(s, origin, "автоматически (пожар подтверждён)")
+            out.append(("ui", {"type": "incident", "data": inc_dict(origin, _logs(s, origin))}))
+            return origin
     if inc is None:
         level = "gas" if kind == "gas" else ("fire" if category == "manual" else "attention")
         if kind in ("fault", "offline"):
             level = "fault"
+        if suspect and level == "gas":
+            level = "attention"
         inc = M.Incident(site_id=site_id, zone_id=zone_id, kind=kind, level=level, device_ids=[device_id])
         s.add(inc)
         s.flush()
         log_incident(s, inc, "created", f"{category or kind}: {device_id}")
+        if suspect:
+            log_incident(s, inc, "warmup", f"{device_id} только что восстановил связь (прогрев {WARMUP_S} с): сигнал считается неподтверждённым — нужен второй датчик или повторный сигнал")
         if level == "fire":
             log_incident(s, inc, "confirmed", "ручной извещатель")
+            _city(s, inc, out)
         if kind in ("fire", "gas"):
             confirm_forecast(s, site_id, zone_id, inc, vts or utcnow(), out)
     else:
         ids = list(inc.device_ids or [])
         inc.repeat_count += 1
+        if kind == "gas" and inc.level == "attention" and not suspect:
+            inc.level, inc.level_at = "gas", utcnow()
+            log_incident(s, inc, "confirmed", f"утечка подтверждена: {device_id}")
         if device_id not in ids:
             ids.append(device_id)
             inc.device_ids = ids
@@ -168,6 +200,7 @@ def raise_incident(s: Session, site_id: str, zone_id: str | None, kind: str, dev
             log_incident(s, inc, "confirmed", f"подтверждено {len(ids)} извещателями" if category != "manual" else "ручной извещатель")
             if AUTO_DISPATCH == "confirmed" and not inc.brigade_status:
                 out += dispatch_brigade(s, inc, "автоматически (пожар подтверждён)")
+            _city(s, inc, out)
     out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
     return inc
 
@@ -178,7 +211,7 @@ def handle_message(s: Session, msg) -> Out:
     if isinstance(msg, S.Hello):
         site = s.get(M.Site, msg.site_id)
         if site is None:
-            site = M.Site(id=msg.site_id, name=msg.site_name or msg.site_id)
+            site = M.Site(id=msg.site_id, name=msg.site_name or msg.site_id, kind=(msg.model_extra or {}).get("site_kind") or "office")
             s.add(site)
         new_session = not msg.session_id or msg.session_id != site.session_id
         if new_session:
@@ -198,8 +231,14 @@ def handle_message(s: Session, msg) -> Out:
                 _HIGH.pop(k, None)
                 _LOW.pop(k, None)
         for z in msg.zones:
-            if z.get("zone_id") and s.get(M.Zone, z["zone_id"]) is None:
-                s.add(M.Zone(id=z["zone_id"], site_id=msg.site_id, name=z.get("name", z["zone_id"]), polygon=z.get("polygon")))
+            if not z.get("zone_id"):
+                continue
+            zz = s.get(M.Zone, z["zone_id"])
+            if zz is None:
+                s.add(M.Zone(id=z["zone_id"], site_id=msg.site_id, name=z.get("name", z["zone_id"]), polygon=z.get("polygon"),
+                             type=z.get("type") or "room"))
+            elif z.get("type") and zz.type == "room":
+                zz.type = z["type"]
         for di in msg.devices:
             d = get_device(s, msg.site_id, di.device_id, di.zone_id, di.device_type, di.model)
             d.zone_id, d.device_type, d.model, d.pos = di.zone_id or d.zone_id, di.device_type, di.model or d.model, di.pos or d.pos
@@ -209,14 +248,27 @@ def handle_message(s: Session, msg) -> Out:
     elif isinstance(msg, S.Telemetry):
         d = get_device(s, msg.site_id, msg.device_id, msg.zone_id, msg.device_type, msg.model)
         was_offline = d.state == "offline"
-        d.last_seen, d.last_values, d.seq = now, msg.values, msg.seq
+        edge = bool((msg.model_extra or {}).get("raw")) or (d.model or "").lower().startswith("esp32")
+        values, bad = Q.clean(d.id, msg.values, d.state if edge else msg.state)
+        if bad and Q.should_report_invalid(d.id):
+            e = add_event(s, msg.site_id, "invalid_value", device_id=d.id, zone_id=d.zone_id, category=d.device_type, state=d.state,
+                          value={k: {"value": v, "range": list(QRANGES.get(k, ()))} for k, v in bad.items()}, source="quality")
+            out.append(("ui", {"type": "event", "data": ev_dict(e)}))
+        merged = {**(d.last_values or {}), **values} if bad else values
+        d.last_seen, d.last_values, d.seq = now, merged, msg.seq
         vts = aware(msg.ts) or now
-        s.add(M.Reading(device_id=d.id, ts=now, vts=vts, values=msg.values, state=msg.state))
-        AIBUF.add(msg.site_id, d.zone_id, vts, msg.values)
+        state = Q.evaluate(d.id, values, d.state if d.state != "offline" else "normal") if edge else msg.state
+        s.add(M.Reading(device_id=d.id, ts=now, vts=vts, values=values, state=state))
+        if not Q.in_warmup(d.id):
+            AIBUF.add(msg.site_id, d.zone_id, vts, values)
         if was_offline:
-            restore_link(s, d, msg.state, out)
-        elif msg.state != d.state:
-            d.state = msg.state
+            restore_link(s, d, state, out, warm=not msg.simulated)
+        elif edge and state != d.state:
+            ev = {"alarm": "alarm", "pre_alarm": "pre_alarm", "normal": "restore"}[state]
+            out += handle_message(s, S.Event(type="event", ts=msg.ts, site_id=msg.site_id, device_id=d.id, zone_id=d.zone_id, event=ev,
+                                             category=d.device_type, prev_state=d.state, state=state, value=values, source="edge"))
+        elif state != d.state:
+            d.state = state
             out.append(("ui", {"type": "device", "data": dev_dict(d)}))
         out.append(("ui", {"type": "telemetry", "data": {"device_id": d.id, "zone_id": d.zone_id, "values": msg.values,
                                                          "state": d.state, "ts": iso(now)}}))
@@ -229,7 +281,26 @@ def handle_message(s: Session, msg) -> Out:
             was_offline = d.state == "offline"
             d.last_seen = now
             if was_offline:
-                restore_link(s, d, "normal", out)
+                restore_link(s, d, "normal", out, warm=not msg.simulated)
+
+    elif isinstance(msg, S.Event) and msg.event == "fire_confirmed":
+        # the fire panel confirmed the fire itself (2 detectors, call point or re-query of a single detector)
+        reason = (msg.value or {}).get("reason", "прибор")
+        inc = s.scalar(select(M.Incident).where(M.Incident.site_id == msg.site_id, M.Incident.kind == "fire", M.Incident.status.in_(OPEN),
+                                                _not_finished()).order_by(M.Incident.id))
+        if inc is None:
+            inc = raise_incident(s, msg.site_id, msg.zone_id, "fire", msg.device_id, "smoke", out, vts=aware(msg.ts) or now)
+        if inc.level != "fire":
+            inc.level, inc.level_at = "fire", utcnow()
+            log_incident(s, inc, "confirmed", f"подтверждено прибором: {reason}")
+            _city(s, inc, out)
+        if AUTO_DISPATCH == "confirmed" and not inc.brigade_status and inc.status in OPEN:
+            out += dispatch_brigade(s, inc, "автоматически (пожар подтверждён прибором)")
+        else:
+            out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
+        e = add_event(s, msg.site_id, "fire_confirmed", device_id=msg.device_id, zone_id=msg.zone_id, category="panel", state="alarm",
+                      value=msg.value, source="panel", event_id=msg.event_id)
+        out.append(("ui", {"type": "event", "data": ev_dict(e)}))
 
     elif isinstance(msg, S.Event):
         d = get_device(s, msg.site_id, msg.device_id, msg.zone_id, msg.category or "unknown")
@@ -241,8 +312,9 @@ def handle_message(s: Session, msg) -> Out:
         cat = (msg.category or d.device_type or "").lower()
         if msg.event in ("alarm", "manual_call"):
             kind = "gas" if cat in GAS_CATEGORIES else "fire"
+            warm = msg.event == "alarm" and Q.in_warmup(d.id)
             raise_incident(s, msg.site_id, d.zone_id, kind, d.id, "manual" if msg.event == "manual_call" else cat, out,
-                           vts=aware(msg.ts) or now)
+                           vts=aware(msg.ts) or now, suspect=warm)
         elif msg.event in ("fault", "tamper", "service_needed"):
             raise_incident(s, msg.site_id, d.zone_id, "fault", d.id, msg.event, out)
             t = open_task(s, d.id, {"fault": "Неисправность", "tamper": "Датчик снят с крепления",
@@ -283,6 +355,7 @@ def handle_message(s: Session, msg) -> Out:
             if msg.status == "extinguished":
                 inc.brigade_done_at = now
             log_incident(s, inc, "brigade_" + msg.status, text, "пожарная бригада")
+            _city(s, inc, out, (msg.model_extra or {}).get("source"), (msg.model_extra or {}).get("cause"))
             e = add_event(s, msg.site_id, "brigade_" + msg.status, zone_id=inc.zone_id, category="brigade", source="sim")
             out += [("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}), ("ui", {"type": "event", "data": ev_dict(e)})]
 
@@ -314,6 +387,31 @@ def check_offline(s: Session) -> Out:
     return out
 
 
+REQUERY_S = int(os.getenv("REQUERY_S", "60"))
+
+
+def check_requery(s: Session) -> Out:
+    """Server-side re-query (for devices without their own fire panel, e.g. the ESP32 stand): a single detector that keeps
+    the alarm for REQUERY_S seconds after warm-up confirms the fire — steam and vape aerosol settle much sooner."""
+    out: Out = []
+    for inc in s.scalars(select(M.Incident).where(M.Incident.kind == "fire", M.Incident.level == "attention", M.Incident.status.in_(OPEN))).all():
+        if secs(utcnow(), inc.opened_at) < REQUERY_S:
+            continue
+        devs = [s.get(M.Device, i) for i in inc.device_ids or []]
+        live = [d for d in devs if d and d.state == "alarm" and not Q.in_warmup(d.id)]
+        if not live:
+            continue
+        inc.level, inc.level_at = "fire", utcnow()
+        log_incident(s, inc, "confirmed", f"перезапрос: {live[0].id} держит тревогу дольше {REQUERY_S} с")
+        _city(s, inc, out)
+        if AUTO_DISPATCH == "confirmed" and not inc.brigade_status:
+            out += dispatch_brigade(s, inc, "автоматически (пожар подтверждён перезапросом)")
+        else:
+            out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
+    s.commit()
+    return out
+
+
 def check_escalation(s: Session) -> Out:
     out: Out = []
     limit = utcnow() - timedelta(seconds=ESCALATE_SECONDS)
@@ -331,6 +429,29 @@ def check_escalation(s: Session) -> Out:
             out.append(("ui", {"type": "incident", "data": inc_dict(inc, _logs(s, inc))}))
     s.commit()
     return out
+
+
+def _not_finished():
+    """A fire the brigade has already put out is history: a new fire on the same site is a new incident."""
+    from sqlalchemy import or_
+    return or_(M.Incident.brigade_status.is_(None), M.Incident.brigade_status.not_in(("extinguished", "returning")))
+
+
+def _city(s: Session, inc: M.Incident, out: Out, source: str | None = None, cause: str | None = None):
+    """Keep the city fire registry in sync with a confirmed fire in a connected object."""
+    try:
+        s.flush()
+        rec = C.record_from_incident(s, inc, _logs(s, inc))
+        if rec is not None and source:
+            rec.source = source
+        if rec is not None and cause in C.CAUSE_RU:
+            rec.cause = cause
+        if rec is not None:
+            s.flush()
+            out.append(("ui", {"type": "city_fire", "data": C.fire_dict(rec)}))
+    except Exception:  # the registry must never break alarm handling
+        import logging
+        logging.getLogger("tutinguard").exception("city registry update failed")
 
 
 def _logs(s: Session, inc: M.Incident):
@@ -418,6 +539,8 @@ def incident_action(s: Session, inc_id: int, action: str, body: S.IncidentAction
         inc.ack_at = inc.ack_at or now
         inc.status, inc.result, inc.closed_at, inc.comment = "closed", body.result, now, body.comment
         log_incident(s, inc, "close", f"{body.result}. {body.comment}".strip(), body.actor)
+        if inc.kind == "fire":
+            _city(s, inc, out)
         if inc.kind == "risk":
             fc = s.scalar(select(M.Forecast).where(M.Forecast.incident_id == inc.id, M.Forecast.status == "open"))
             if fc:

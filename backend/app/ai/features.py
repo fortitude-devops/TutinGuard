@@ -10,7 +10,9 @@ import numpy as np
 SERIES = ("temp", "smoke", "co", "lel")
 WINDOW = 150          # minutes of history the model looks at
 HORIZON = 60          # predict "ignition within the next 60 minutes"
-ZONE_TYPES = {"kitchen": 0, "server": 1, "office": 2, "openspace": 2, "meeting": 2, "hall": 3, "storage": 4}
+ZONE_TYPES = {"kitchen": 0, "server": 1, "office": 2, "openspace": 2, "meeting": 2, "hall": 3, "storage": 4,
+              # other buildings map onto the trained types
+              "food": 0, "laundry": 0, "classroom": 2, "ward": 2, "shop": 2, "room": 2, "wc": 3}
 # what counts as "above background" for persistence features
 PERSIST_THR = {"temp": 1.0, "smoke": 0.01, "co": 5.0, "lel": 2.0}
 VALUE_KEYS = {"temp": "temp_c", "smoke": "obscuration_db_m", "co": "co_ppm", "lel": "lel_pct"}

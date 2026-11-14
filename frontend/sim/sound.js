@@ -198,7 +198,7 @@
   function onChange(f) { listeners.push(f); }
   /** Кнопка «🔊/🔇» — переключает звук и показывает состояние */
   function bindButton(btn) {
-    const upd = (on) => { btn.textContent = on ? '🔊 Звук' : '🔇 Звук'; btn.classList.toggle('on', on); btn.title = on ? 'Выключить звук' : 'Включить звук'; };
+    const upd = (on) => { const T = window.TGUI; btn.innerHTML = T ? T.icon(on ? 'volume' : 'mute') + '<span>' + T.t('Звук') + '</span>' : (on ? 'Звук: вкл' : 'Звук: выкл'); btn.classList.toggle('on', on); btn.title = on ? 'Выключить звук' : 'Включить звук'; };
     btn.addEventListener('click', (e) => { e.stopPropagation(); if (isOn()) setMuted(true); else setMuted(false); });
     onChange(upd); upd(isOn());
   }
