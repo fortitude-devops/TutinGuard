@@ -23,6 +23,7 @@ from starlette.concurrency import run_in_threadpool
 
 from . import auth as A
 from . import city as C
+from . import assistant as AS
 from . import tiles as TILES
 from . import db as M
 from . import logic as L
@@ -886,6 +887,30 @@ async def city_ask(body: dict, u: dict = CITY_ROLE):
     ov = await run_db(C.overview, int(body.get("days", 365)), None)
     text, engine = await run_in_threadpool(C.ask, q, ov)
     return {"answer": text, "engine": engine}
+
+
+# ---------------- AI assistant (every role) ----------------
+@app.get("/api/assistant/status")
+async def assistant_status(u: dict = USER):
+    ok = await run_in_threadpool(C.llm_available)
+    return {"llm": ok, "model": C.OLLAMA_MODEL if ok else None}
+
+
+@app.post("/api/assistant/ask")
+async def assistant_ask(body: dict, u: dict = USER):
+    """Streams the answer as plain text. Body: {question, site_id, incident_id?, history?: [{role, text}]}"""
+    q = str(body.get("question", "")).strip()[:600]
+    if not q:
+        raise HTTPException(400, "Пустой вопрос")
+    inc = body.get("incident_id")
+    try:
+        ctx = await run_db(AS.build_context, str(body.get("site_id") or "office-01"), u["role"], int(inc) if inc else None)
+    except KeyError:
+        raise HTTPException(404, "Объект не найден")
+    hist = [m for m in (body.get("history") or []) if isinstance(m, dict)][-6:]
+    return StreamingResponse(AS.stream(u["role"], ctx, q, hist), media_type="text/plain; charset=utf-8",
+                             headers={"x-engine": "llm" if C.OLLAMA_URL else "rules", "x-model": C.OLLAMA_MODEL if C.OLLAMA_URL else "", "cache-control": "no-cache",
+                                      "x-accel-buffering": "no"})
 
 
 # ---------------- AI forecast ----------------

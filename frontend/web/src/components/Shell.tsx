@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import * as DM from '@radix-ui/react-dropdown-menu';
 import {
   Map, LayoutGrid, Siren, PanelsTopLeft, Radio, Wrench, Sparkles, ScrollText, BarChart3, Building2, Box, Moon, Sun, Volume2, VolumeX,
-  Bell, LogOut, ChevronDown, Menu, Check, Flame, Wind,
+  Bell, LogOut, ChevronDown, Menu, Check, Flame, Wind, MoreHorizontal,
 } from 'lucide-react';
 import { LogoMark, Wordmark } from './Logo';
 import { ROLE_NAV, VIEW_TITLE, VIEW_SUB, type View, can } from '../lib/dict';
@@ -41,10 +41,28 @@ function Sidebar({ open, onNav }: { open: boolean; onNav: () => void }) {
         {group(['service', 'ai', 'journal', 'reports', 'registry'])}
       </nav>
       <div className="side-foot">
+        <div className="m-only row" style={{ gap: 8, flexWrap: 'wrap' }}><LangSwitch /><ThemeSwitch /></div>
         <a className="btn" href="/sim/" target="_blank" rel="noopener"><Box size={18} />{tr('3D-симулятор')}</a>
         <div className="demo">{tr('Демо-сборка. Реальные вызовы 101/104 не отправляются.')}</div>
       </div>
     </aside>
+  );
+}
+
+function MobileNav({ onMore }: { onMore: () => void }) {
+  const st = useS(), nav = ROLE_NAV[st.user!.role];
+  const inc = openIncidents(st).length;
+  const main = nav.filter((v) => v !== 'journal' && v !== 'registry' && v !== 'reports').slice(0, 4);
+  return (
+    <nav className="mnav" aria-label={tr('Навигация')}>
+      {main.map((v) => (
+        <NavLink key={v} to={'/' + v} className={({ isActive }) => (isActive ? 'active' : '')}>
+          <span className="mi-ic">{NAV_ICON[v]}{v === 'incidents' && inc > 0 && <span className="mbadge">{inc}</span>}</span>
+          <span className="ml">{tr(VIEW_TITLE[v])}</span>
+        </NavLink>
+      ))}
+      <button type="button" onClick={onMore}><span className="mi-ic"><MoreHorizontal size={19} /></span><span className="ml">{tr('Ещё')}</span></button>
+    </nav>
   );
 }
 
@@ -54,7 +72,7 @@ function SitePicker() {
   return (
     <DM.Root>
       <DM.Trigger asChild>
-        <button className="btn" aria-label={tr('Выбрать объект')} style={{ maxWidth: 340 }}>
+        <button className="btn site-pick" aria-label={tr('Выбрать объект')} style={{ maxWidth: 340 }}>
           <Building2 size={17} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{cur?.name || tr('Объект')}</span><ChevronDown size={16} />
         </button>
       </DM.Trigger>
@@ -180,15 +198,15 @@ export function Shell({ view, children, actions }: { view: View; children: React
             {VIEW_SUB[view] && <div className="sub">{tr(VIEW_SUB[view])}</div>}
           </div>
           {view !== 'city' && <SitePicker />}
-          <span className={`badge ${!wsOk ? 'b-fire' : sim.connected ? 'b-ok' : 'b-off'}`}>
+          <span className={`badge conn ${!wsOk ? 'b-fire' : sim.connected ? 'b-ok' : 'b-off'}`}>
             {wsOk && sim.connected ? <span className="live-dot" /> : <span className="d" />}
             {!wsOk ? tr('нет связи с сервером') : sim.connected ? tr('объект на связи') : tr('симулятор не подключён')}
           </span>
           <div className="grow" />
           <span className="faint small clock" style={{ fontVariantNumeric: 'tabular-nums' }}>{now.toLocaleString('ru-RU', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-          <PresentButton />
-          <LangSwitch />
-          <ThemeSwitch />
+          <span className="d-only"><PresentButton /></span>
+          <span className="d-only"><LangSwitch /></span>
+          <span className="d-only"><ThemeSwitch /></span>
           <button className="btn icon" aria-label={soundOn ? tr('Выключить звук') : tr('Включить звук')} onClick={toggleSound} style={soundOn ? { color: 'var(--accent)' } : undefined}>{soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
           <Bell_ />
           <UserMenu />
@@ -199,6 +217,7 @@ export function Shell({ view, children, actions }: { view: View; children: React
           {children}
         </div>
       </div>
+      <MobileNav onMore={() => setOpen(true)} />
     </div>
   );
 }

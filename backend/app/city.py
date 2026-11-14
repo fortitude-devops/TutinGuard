@@ -387,7 +387,8 @@ def llm_available() -> bool:
 def llm_generate(prompt: str, timeout: int = 90) -> str | None:
     if not OLLAMA_URL:
         return None
-    body = json.dumps({"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "options": {"temperature": .2}}).encode()
+    body = json.dumps({"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "keep_alive": "60m",
+                       "options": {"temperature": .2, "num_predict": int(os.getenv("OLLAMA_MAX_TOKENS", "350"))}}).encode()
     try:
         req = urllib.request.Request(OLLAMA_URL + "/api/generate", data=body, headers={"content-type": "application/json"})
         with urllib.request.urlopen(req, timeout=timeout) as r:

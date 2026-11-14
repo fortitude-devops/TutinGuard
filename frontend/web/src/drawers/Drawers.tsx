@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Truck, Users, MapPin, Droplets, Zap, TriangleAlert, Accessibility, DoorOpen, Phone, Siren, Fan, ArrowDownToLine, Unlock, Megaphone, FileText, Wrench, CalendarCheck, RotateCcw, Trash2, Copy, Printer, Box, ClipboardList, CheckCircle2, Circle } from 'lucide-react';
+import { X, Truck, Users, MapPin, Droplets, Zap, TriangleAlert, Accessibility, DoorOpen, Phone, Siren, Fan, ArrowDownToLine, Unlock, Megaphone, FileText, Wrench, CalendarCheck, RotateCcw, Trash2, Copy, Printer, Box, ClipboardList, CheckCircle2, Circle, Sparkles } from 'lucide-react';
+import { openAssistant } from '../components/Assistant';
 import { useS, closeDrawer, zoneName, userName, command, fail, openModal, toast, loadAll, switchSite } from '../store';
 import { ACTION, DSTATE, DTYPE, KIND, LEVEL, RESULT, STATUS, ZTYPE, can, SCENE_OF } from '../lib/dict';
 import { ago, dur, fmtD, fmtDT, fmtT, fmtHM } from '../lib/format';
@@ -63,6 +64,11 @@ function IncDrawer({ id }: { id: number }) {
           {i.comment && <div><span>{tr('Комментарий')}</span><span>{i.comment}</span></div>}
         </div>
         <IncidentActions i={i} />
+        <div className="ai-ask">
+          <span className="ai-ico sm"><Sparkles size={15} /></span>
+          <span className="grow small">{tr('ИИ-помощник видит данные этого инцидента')}</span>
+          <button className="btn sm" onClick={() => openAssistant({ incident: i.id, ask: tr(i.status === 'closed' ? 'Кратко опиши инцидент для руководства' : 'Что делать по этому инциденту?') })}>{tr('Спросить ИИ')}</button>
+        </div>
         {i.brigade && (
           <Sec title={tr('Пожарная бригада')} icon={<Truck size={16} />} right={<Badge tone="fire">DEMO</Badge>}>
             <BrigadeSteps i={i} />

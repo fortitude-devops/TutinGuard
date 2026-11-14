@@ -7,6 +7,7 @@ import { Shell } from './components/Shell';
 import { ModalHost, Toasts, CallCard } from './components/Overlays';
 import { DrawerHost } from './drawers/Drawers';
 import { PresentPanel } from './components/Present';
+import { AssistantFab, AssistantPanel } from './components/Assistant';
 import { Login } from './views/Login';
 import { Overview } from './views/Overview';
 import { Incidents } from './views/Incidents';
@@ -59,6 +60,8 @@ export function App() {
           </Routes>
           <DrawerHost />
           <PresentPanel />
+          <AssistantFab />
+          <AssistantPanel />
         </HashRouter>
       )}
       <ModalHost />
