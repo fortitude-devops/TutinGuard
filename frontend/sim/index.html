@@ -55,7 +55,42 @@
   #tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:12px;display:none;max-width:260px;white-space:pre-line;box-shadow:var(--shadow)}
   #loading{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;color:var(--mut);background:var(--bg)}
   a.btnlink{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;color:var(--acc);text-decoration:none;font-weight:550;font-size:12.5px}
-  @media (max-width:900px){#right{display:none}#legend{display:none}#left{width:260px}}
+  @media (min-width:761px) and (max-width:900px){#right{display:none}#legend{display:none}#left{width:260px}}
+  /* ---------- mobile: compact top bar + bottom tabs with a sheet ---------- */
+  #mtop,#mbar{display:none}
+  @media (max-width:760px){
+    #legend{display:none}
+    #left,#right{display:none;left:0;right:0;top:auto;bottom:calc(60px + env(safe-area-inset-bottom));width:auto;max-height:58vh;border-radius:20px 20px 0 0;border-bottom:0;padding:14px 14px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    body.m-ctrl #left{display:block}
+    body.m-data #right,body.m-log #right,body.m-ppl #right{display:block}
+    #right .sec{display:none} body.m-data #right .sec[data-sec=data],body.m-log #right .sec[data-sec=log],body.m-ppl #right .sec[data-sec=ppl]{display:block}
+    #right .sec h4:first-child{margin-top:0}
+    #log{max-height:none}
+    #ztab td,#ztab th{font-size:12.5px;padding:7px 4px}
+    #mtop{display:flex;flex-direction:column;gap:8px;position:absolute;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top));pointer-events:auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px 12px;backdrop-filter:blur(10px);box-shadow:var(--shadow)}
+    #mtop .r1{display:flex;align-items:center;gap:8px}
+    #mtop .r1 .brand{font-size:14px;gap:6px} #mtop .r1 .brand small{display:none}
+    #mtop #mclock{font:600 14px ui-monospace,'JetBrains Mono',Menlo,monospace;margin-left:auto}
+    #mtop .pill{height:22px;font-size:11px;padding:0 8px}
+    #mkpi{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+    #mkpi div{background:var(--card2);border-radius:10px;padding:5px 6px;text-align:center;min-width:0}
+    #mkpi small{display:block;font-size:10px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #mkpi b{display:block;font-size:14px;font-weight:650;white-space:nowrap}
+    #mkpi b.w{color:var(--warn)} #mkpi b.b{color:var(--bad)}
+    #mkpi .zn{font-size:9.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+    #mbar{display:flex;position:absolute;left:0;right:0;bottom:0;pointer-events:auto;background:var(--card);border-top:1px solid var(--line2);backdrop-filter:blur(12px);padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px}
+    #mbar button{flex:1;min-width:0;flex-direction:column;gap:2px;height:48px;border:0;background:transparent;color:var(--mut);font-size:10.5px;font-weight:600;padding:4px 2px;border-radius:12px}
+    #mbar button.on{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent)}
+    #mbar button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #mbar .badge{position:absolute;margin:-4px 0 0 18px;min-width:16px;height:16px;border-radius:8px;background:var(--bad);color:#fff;font-size:9.5px;display:grid;place-items:center;padding:0 4px}
+    #tip{display:none!important}
+    #left .m-hide{display:none}
+    body.m-ctrl #left{display:flex;flex-direction:column}
+    #left .m-ctl{order:-1} #left .m-ctl h4{margin-top:4px}
+    #left .m-hz{order:0}
+    #left .grid2 button{min-height:42px}
+  }
+
 </style>
 <script src="./ui.js"></script>
 <script src="./sound.js"></script>
@@ -66,18 +101,18 @@
 <body>
 <div id="hud">
   <div class="card" id="left">
-    <div class="row" style="margin-top:0"><div class="brand"><span id="logo"></span><span>TUTIN<span class="g">GUARD</span><small id="brandSub">3D-офис · демо</small></span></div>
+    <div class="row m-hide" style="margin-top:0"><div class="brand"><span id="logo"></span><span>TUTIN<span class="g">GUARD</span><small id="brandSub">3D-офис · демо</small></span></div>
       <a class="btnlink" href="/app/" target="_blank" rel="noopener" data-icon="grid"><span data-i18n="Пульт">Пульт</span></a></div>
     <div class="row small"><span class="muted" data-i18n>Объект</span><select id="selScene" style="max-width:180px"></select></div>
     <div class="row small"><div class="seg" id="segTheme" role="group" aria-label="Тема"><button type="button" data-th="dark" aria-label="dark"></button><button type="button" data-th="light" aria-label="light"></button></div>
       <select id="selLang" aria-label="Язык" style="height:32px"><option value="ru">Рус</option><option value="kk">Қаз</option><option value="en">Eng</option></select></div>
     <div class="muted small" style="margin-top:8px" data-i18n>Симуляция. Все данные тестовые.</div>
-    <div class="row"><span id="clock">00:00</span><span id="status" class="pill ok">Норма</span></div>
-    <div class="row small"><span class="muted" data-i18n>Сервер TutinGuard</span><span id="link" class="pill warn" title="">подключение…</span></div>
+    <div class="row m-hide"><span id="clock">00:00</span><span id="status" class="pill ok">Норма</span></div>
+    <div class="row small m-hide"><span class="muted" data-i18n>Сервер TutinGuard</span><span id="link" class="pill warn" title="">подключение…</span></div>
     <div class="row small" style="display:none"><span class="muted" data-i18n>Пожарные (DEMO)</span><span id="brigade" class="pill warn">—</span></div>
-    <h4 data-i18n>Источники опасности</h4>
-    <div id="hazards"></div>
-    <h4 data-i18n>Управление</h4>
+    <div class="m-hz"><h4 data-i18n>Источники опасности</h4>
+    <div id="hazards"></div></div>
+    <div class="m-ctl"><h4 data-i18n>Управление</h4>
     <div class="grid2">
       <button id="btnEvac" data-icon="users"><span data-i18n>Эвакуация</span></button><button id="btnReset" data-icon="reset"><span data-i18n>Сброс</span></button>
       <button id="btnWalls" data-icon="walls"><span data-i18n>Низкие стены</span></button><button id="btnTop" data-icon="top"><span data-i18n>Вид сверху</span></button>
@@ -87,16 +122,16 @@
     <label class="chk"><input type="checkbox" id="chkAlerts" checked> <span data-i18n>Оповещение (сирены) работает</span></label>
     <div class="row"><span data-i18n>Скорость времени</span>
       <select id="selSpeed"><option value="1">×1</option><option value="2">×2</option><option value="5" selected>×5</option><option value="10">×10</option><option value="60">×60 (1 с = 1 мин)</option></select>
-    </div>
-    <p class="muted small" style="margin:10px 0 0" data-i18n>Клик по комнате — приблизить. Клик по красной цифре — запустить источник. Клик по датчику — оборвать или вернуть связь. Колесо мыши — зум.</p>
+    </div></div>
+    <p class="muted small m-hide" style="margin:10px 0 0" data-i18n>Клик по комнате — приблизить. Клик по красной цифре — запустить источник. Клик по датчику — оборвать или вернуть связь. Колесо мыши — зум.</p>
   </div>
   <div class="card" id="right">
-    <h4 style="margin-top:0" data-i18n>Показания по зонам</h4>
-    <table id="ztab"></table>
-    <h4 data-i18n>Журнал событий</h4>
-    <div id="log"></div>
-    <h4 data-i18n>Люди (FED — доза дыма и тепла)</h4>
-    <div id="people"></div>
+    <div class="sec" data-sec="data"><h4 style="margin-top:0" data-i18n>Показания по зонам</h4>
+    <table id="ztab"></table></div>
+    <div class="sec" data-sec="log"><h4 data-i18n>Журнал событий</h4>
+    <div id="log"></div></div>
+    <div class="sec" data-sec="ppl"><h4 data-i18n>Люди (FED — доза дыма и тепла)</h4>
+    <div id="people"></div></div>
   </div>
   <div id="legend">
     <span><span class="dot" style="background:var(--ok)"></span><span data-i18n>норма</span></span>
@@ -105,6 +140,17 @@
     <span><span class="dot" style="background:#6b7280"></span><span data-i18n>нет связи</span></span>
     <span><span class="dot" style="background:#c62828;border-radius:3px"></span><span data-i18n>источник опасности</span></span>
   </div>
+  <div id="mtop">
+    <div class="r1"><div class="brand"><span id="mlogo"></span><span>TUTIN<span class="g">GUARD</span></span></div>
+      <span id="mstatus" class="pill ok">Норма</span><span id="mlink" class="pill warn">…</span><span id="mclock">00:00</span><a class="btnlink" href="/app/" aria-label="Пульт" data-icon="grid"></a></div>
+    <div id="mkpi"></div>
+  </div>
+  <nav id="mbar" aria-label="Меню">
+    <button type="button" data-m="ctrl" data-icon="sliders"><span data-i18n>Управление</span></button>
+    <button type="button" data-m="data" data-icon="table"><span data-i18n>Показания</span></button>
+    <button type="button" data-m="log" data-icon="list"><span data-i18n>Журнал</span></button>
+    <button type="button" data-m="ppl" data-icon="users"><span data-i18n>Люди</span></button>
+  </nav>
   <div id="tip"></div>
   <div id="loading" data-i18n>Загрузка сцены…</div>
 </div>
@@ -1563,7 +1609,7 @@ function renderHazButtons() {
 renderHazButtons();
 document.getElementById('btnEvac').onclick = () => { if (alertsOn) { sirenOn = true; sirenSilenced = false; } startEvac('запущена вручную'); };
 TGUI.apply();
-document.getElementById('logo').innerHTML = TGUI.LOGO;
+document.getElementById('logo').innerHTML = TGUI.LOGO; document.getElementById('mlogo').innerHTML = TGUI.LOGO;
 { const seg = document.getElementById('segTheme');
   seg.querySelectorAll('button').forEach((b) => { b.innerHTML = TGUI.icon(b.dataset.th === 'dark' ? 'moon' : 'sun', 15); b.onclick = () => { TGUI.setTheme(b.dataset.th); upd(); }; });
   const upd = () => seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.th === TGUI.theme)); upd();
@@ -1647,8 +1693,31 @@ function refreshPanels() {
     html += `<tr><td>${z.name.split(' ·')[0]}</td><td class="${c(z.smoke, .05, .15)}">${z.smoke.toFixed(2)}</td><td class="${c(z.temp, 45, 57)}">${z.temp.toFixed(0)}</td><td class="${c(z.co, 50, 100)}">${z.co.toFixed(0)}</td><td class="${c(z.lel, 10, 20)}">${z.lel.toFixed(0)}%</td><td class="${z.aiRisk ? (z.aiRisk.level === 'high' ? 'b' : z.aiRisk.level === 'elevated' ? 'w' : '') : ''}">${z.aiRisk ? (z.aiRisk.prob * 100).toFixed(0) + '%' : '—'}</td></tr>`;
   }
   ztab.innerHTML = html;
+  if (matchMedia('(max-width:760px)').matches) mobileRefresh();
   peopleEl.innerHTML = PEOPLE.map(P => { const f = Math.max(P.fedCO, P.fedHeat); const col = injuryCol(f, P.state); const st = { sit: '', stand: TGUI.icon('up', 12), walk: TGUI.icon('walk', 12), out: TGUI.icon('check', 12), down: TGUI.icon('x', 12) }[P.state]; return `<span><span class="dot" style="background:#${col.toString(16).padStart(6, '0')}"></span>${P.label} ${st} <span class="muted">${f.toFixed(2)}</span></span>`; }).join('');
 }
+function mobileRefresh() {
+  document.getElementById('mclock').textContent = fmtT(simT);
+  for (const [a, b] of [['status', 'mstatus'], ['link', 'mlink']]) { const x = document.getElementById(a), y = document.getElementById(b); if (x && y) { y.className = x.className; y.textContent = x.textContent; } }
+  const top = (k) => ZONES.reduce((m, z) => (z[k] > m[k] ? z : m), ZONES[0]);
+  const ai = ZONES.reduce((m, z) => ((z.aiRisk?.prob || 0) > (m.aiRisk?.prob || 0) ? z : m), ZONES[0]);
+  const c = (v, w, b) => v >= b ? 'b' : v >= w ? 'w' : '';
+  const cell = (lab, z, val, cls) => `<div><small>${lab}</small><b class="${cls}">${val}</b><span class="zn">${z ? z.name.split(' ·')[0] : ''}</span></div>`;
+  const zs = top('smoke'), zt = top('temp'), zc = top('co'), zl = top('lel');
+  document.getElementById('mkpi').innerHTML =
+    cell(TGUI.t('Дым'), zs, zs.smoke.toFixed(2), c(zs.smoke, .05, .15)) +
+    cell('T °C', zt, zt.temp.toFixed(0), c(zt.temp, 45, 57)) +
+    cell('CO', zc, zc.co.toFixed(0), c(zc.co, 50, 100)) +
+    cell('CH₄', zl, zl.lel.toFixed(0) + '%', c(zl.lel, 10, 20)) +
+    cell('AI', ai.aiRisk ? ai : null, ai.aiRisk ? (ai.aiRisk.prob * 100).toFixed(0) + '%' : '—', ai.aiRisk ? (ai.aiRisk.level === 'high' ? 'b' : ai.aiRisk.level === 'elevated' ? 'w' : '') : '');
+}
+// mobile tabs: tap opens a bottom sheet, tap again closes it
+document.querySelectorAll('#mbar button').forEach(b => b.addEventListener('click', () => {
+  const m = b.dataset.m, open = document.body.classList.contains('m-' + m);
+  ['ctrl', 'data', 'log', 'ppl'].forEach(k => document.body.classList.remove('m-' + k));
+  document.querySelectorAll('#mbar button').forEach(x => x.classList.remove('on'));
+  if (!open) { document.body.classList.add('m-' + m); b.classList.add('on'); }
+}));
 function injuryCol(f, st) { if (st === 'down') return 0x7f1d1d; return f < .1 ? 0x22c55e : f < .3 ? 0xfacc15 : f < .6 ? 0xf97316 : f < 1 ? 0xef4444 : 0x7f1d1d; }
 
 // ================= Render loop =================
